@@ -1,0 +1,99 @@
+From: Rajat Verma <rajat.verma@vermalegal.in>
+To: Karan Malhotra <karan.m@vantageretail.in>
+Cc: Priyanka Sethi <priyanka.sethi@vantageretail.in>; Meera Iyer <meera.iyer@vantageretail.in>
+Date: Fri, 14 Feb 2026 17:35 IST
+Subject: Compliance requirements for the new store — please treat as must-have
+
+Dear Karan,
+
+Further to our call, here are the compliance requirements for the Horizon storefront. Please
+have these built into the requirements — most are not optional to operate a consumer store in
+India. I've kept it practical rather than a legal essay.
+
+1. POLICY PAGES (all must be live at launch, linked in the footer on every page, and shown/
+   linked at checkout):
+   - Terms & Conditions / Terms of Use
+   - Privacy Policy
+   - Return, Refund & Cancellation Policy (must match what Ops/CX actually do — align with
+     their intake form; note the return window is still undecided there)
+   - Shipping / Delivery Policy (serviceability, timelines, charges)
+   - Cookie Policy
+   These should be manageable as content (not hard-coded), so we can update wording without a
+   developer. I understand there's a CMS requirement already — tie them to that.
+
+2. CONSENT AT CHECKOUT: before an order is placed, the customer must affirmatively accept the
+   Terms & the Return Policy (a ticked checkbox with links — not pre-ticked). Record that
+   acceptance against the order (timestamp + which version of the terms).
+
+3. COOKIES: a cookie-consent banner on first visit, allowing accept / reject of non-essential
+   cookies (analytics, marketing) with essential cookies exempt. Store the consent choice and
+   don't fire non-essential trackers before consent. This matters because Growth wants
+   analytics — analytics must respect this.
+
+4. DATA PROTECTION (DPDP Act, 2023): we process personal data (name, contact, address, order
+   history), so:
+   - Collect data only for stated purposes; show the purpose (the Privacy Policy covers this).
+   - Obtain consent for processing where required; keep it demonstrable.
+   - MARKETING CONSENT must be SEPARATE and OPT-IN. Do not bundle it with account creation or
+     T&C acceptance. Promotional emails/SMS/WhatsApp (including things like abandoned-cart or
+     promo campaigns) may only go to customers who opted in. Transactional messages (order
+     confirmation, shipping, refunds) are fine without marketing consent.
+   - Provide an easy unsubscribe / withdraw-consent path.
+
+5. DATA-PRINCIPAL RIGHTS: customers can request access to, correction of, and erasure of their
+   personal data. For launch a manual/admin-assisted process is acceptable, but there must be a
+   documented way to do it and to respond in reasonable time.
+
+6. GRIEVANCE REDRESSAL: publish contact details of a Grievance Officer (name/role + email) on
+   the site, as required. CX (Neha) should own that inbox.
+
+7. RETENTION: retain tax invoices and transaction records for the statutory period required
+   under tax law (Priyanka to confirm the exact duration — do not guess). Personal data beyond
+   its purpose/retention period should be deleted or anonymised, EXCEPT where we must keep it
+   for the tax records above.
+
+Happy to review the policy copy before go-live. Please confirm these are captured.
+
+Regards,
+Rajat Verma
+Verma & Associates | External Counsel
+
+
+---------------------------------------------------------------------------------------------
+
+From: Priyanka Sethi <priyanka.sethi@vantageretail.in>
+To: Rajat Verma <rajat.verma@vermalegal.in>; Karan Malhotra <karan.m@vantageretail.in>
+Cc: Meera Iyer <meera.iyer@vantageretail.in>
+Date: Mon, 17 Feb 2026 10:02 IST
+Subject: RE: Compliance requirements for the new store — please treat as must-have
+
+Thanks Rajat. On point 7 — I'll confirm the exact retention duration for invoices/records with
+our auditor and revert; it's several years, don't hard-code anything until I confirm. The GST
+invoice + credit note requirements I already sent to Karan on the payments thread still stand
+and line up with this.
+
+One addition: the invoice retention must survive even if a customer asks for erasure — i.e. an
+erasure request cannot wipe records we're legally required to keep. Please make sure the build
+handles that distinction (erase marketing/profile data, retain statutory financial records).
+
+Priyanka
+
+
+---------------------------------------------------------------------------------------------
+
+From: Karan Malhotra <karan.m@vantageretail.in>
+To: Rajat Verma <rajat.verma@vermalegal.in>; Priyanka Sethi <priyanka.sethi@vantageretail.in>
+Cc: Meera Iyer <meera.iyer@vantageretail.in>; Dev Prasad <dev.prasad@vantageretail.in>
+Date: Mon, 17 Feb 2026 12:20 IST
+Subject: RE: RE: Compliance requirements for the new store — please treat as must-have
+
+Got it, thank you both. Confirming these are captured — I'll break them into backlog items and
+the engineering support for erasure/retention/consent is already noted in the NFR addendum
+(adding Dev so he's aware of the erasure-vs-retention nuance in point 7 / Priyanka's addition).
+
+Two things I'm noting as still-open off the back of this:
+  - exact retention duration (Priyanka to confirm with auditor)
+  - the marketing-consent requirement means our planned abandoned-cart email can ONLY go to
+    opted-in users — Growth needs to know that changes the addressable audience.
+
+Karan

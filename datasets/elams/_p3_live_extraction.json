@@ -1,0 +1,239 @@
+{
+  "accepted": [
+    {
+      "id": "EX-001",
+      "statement": "The system shall allow an employee to submit a leave request specifying leave type.",
+      "rtype": "functional",
+      "inferred": false,
+      "quotes": [
+        "The system shall allow an employee to submit a leave request specifying leave type, start date, and end date."
+      ]
+    },
+    {
+      "id": "EX-002",
+      "statement": "The system shall allow an employee to submit a leave request specifying a start date.",
+      "rtype": "functional",
+      "inferred": false,
+      "quotes": [
+        "The system shall allow an employee to submit a leave request specifying leave type, start date, and end date."
+      ]
+    },
+    {
+      "id": "EX-003",
+      "statement": "The system shall allow an employee to submit a leave request specifying an end date.",
+      "rtype": "functional",
+      "inferred": false,
+      "quotes": [
+        "The system shall allow an employee to submit a leave request specifying leave type, start date, and end date."
+      ]
+    },
+    {
+      "id": "EX-004",
+      "statement": "The request form shall serve as the primary entry point into the leave lifecycle.",
+      "rtype": "functional",
+      "inferred": false,
+      "quotes": [
+        "The request form is the primary entry point into the leave lifecycle"
+      ]
+    },
+    {
+      "id": "EX-006",
+      "statement": "The system shall provide a simple, guided leave request experience so that employees do not need to know company leave policy details in advance.",
+      "rtype": "non_functional",
+      "inferred": false,
+      "quotes": [
+        "Employees need a simple, guided way to ask for time off without having to know the details of company leave policy up front."
+      ]
+    },
+    {
+      "id": "EX-007",
+      "statement": "The system shall determine employee eligibility for leave types prior to presenting the request form.",
+      "rtype": "functional",
+      "inferred": true,
+      "quotes": [
+        "typically presenting only the leave types for which the employee is eligible"
+      ]
+    },
+    {
+      "id": "EX-008",
+      "statement": "Each submitted leave request shall be routed to the employee's direct manager for approval.",
+      "rtype": "functional",
+      "inferred": false,
+      "quotes": [
+        "The system shall route each submitted leave request to the employee's direct manager for approval."
+      ]
+    },
+    {
+      "id": "EX-009",
+      "statement": "Each leave request shall have a single, clear point of accountability so that no request is lost.",
+      "rtype": "business",
+      "inferred": false,
+      "quotes": [
+        "Every request needs a clear, single point of accountability so that no request is lost in a shared inbox."
+      ]
+    },
+    {
+      "id": "EX-010",
+      "statement": "The system shall provide managers with a dedicated queue displaying their pending leave requests.",
+      "rtype": "functional",
+      "inferred": false,
+      "quotes": [
+        "Managers will see pending requests in a dedicated queue"
+      ]
+    },
+    {
+      "id": "EX-011",
+      "statement": "The pending requests queue shall order requests so that those with the earliest leave start dates appear first (i.e., are easiest to act on first).",
+      "rtype": "functional",
+      "inferred": false,
+      "quotes": [
+        "ordered so that the earliest start dates are easiest to act on first"
+      ]
+    },
+    {
+      "id": "EX-012",
+      "statement": "Leave requests shall not be routed to a shared inbox.",
+      "rtype": "constraint",
+      "inferred": true,
+      "quotes": [
+        "Every request needs a clear, single point of accountability so that no request is lost in a shared inbox."
+      ]
+    },
+    {
+      "id": "EX-013",
+      "statement": "The system shall prevent an employee from requesting more leave days than their available balance for the selected leave type.",
+      "rtype": "constraint",
+      "inferred": false,
+      "quotes": [
+        "An employee may not request more leave days than their available balance for the selected leave type."
+      ]
+    },
+    {
+      "id": "EX-014",
+      "statement": "The system shall track leave balances per leave category rather than as a single pooled figure.",
+      "rtype": "functional",
+      "inferred": false,
+      "quotes": [
+        "Balances are tracked per leave category rather than as a single pooled figure."
+      ]
+    },
+    {
+      "id": "EX-015",
+      "statement": "The system shall maintain a separate balance for casual leave for each employee.",
+      "rtype": "functional",
+      "inferred": false,
+      "quotes": [
+        "Each employee has a separate balance for casual, sick, and earned leave."
+      ]
+    },
+    {
+      "id": "EX-016",
+      "statement": "The system shall maintain a separate balance for sick leave for each employee.",
+      "rtype": "functional",
+      "inferred": false,
+      "quotes": [
+        "Each employee has a separate balance for casual, sick, and earned leave."
+      ]
+    },
+    {
+      "id": "EX-017",
+      "statement": "The system shall maintain a separate balance for earned leave for each employee.",
+      "rtype": "functional",
+      "inferred": false,
+      "quotes": [
+        "Each employee has a separate balance for casual, sick, and earned leave."
+      ]
+    },
+    {
+      "id": "EX-018",
+      "statement": "Preventing employees from over-drawing their leave entitlements is a core goal of this release.",
+      "rtype": "business",
+      "inferred": false,
+      "quotes": [
+        "preventing employees from over-drawing their entitlements is one of the core goals of this release."
+      ]
+    },
+    {
+      "id": "EX-019",
+      "statement": "When a leave request is approved, the system shall deduct the leave days from the employee's balance.",
+      "rtype": "functional",
+      "inferred": false,
+      "quotes": [
+        "When a leave request is approved, the system shall deduct the leave days from the employee's balance."
+      ]
+    },
+    {
+      "id": "EX-020",
+      "statement": "The deduction of leave days shall occur only after final approval, not on submission of the leave request.",
+      "rtype": "constraint",
+      "inferred": false,
+      "quotes": [
+        "The deduction shall occur only after final approval, not on submission."
+      ]
+    },
+    {
+      "id": "EX-021",
+      "statement": "The system shall not deduct leave days from an employee's balance when a leave request is submitted but not yet approved.",
+      "rtype": "constraint",
+      "inferred": true,
+      "quotes": [
+        "The deduction shall occur only after final approval, not on submission.",
+        "Employees have raised concerns in the past about days being counted against them before a request is even reviewed"
+      ]
+    },
+    {
+      "id": "EX-022",
+      "statement": "Leave requests must be submitted at least 3 working days before the start date of the leave.",
+      "rtype": "constraint",
+      "inferred": false,
+      "quotes": [
+        "Leave requests must be submitted at least 3 working days before the start date"
+      ]
+    },
+    {
+      "id": "EX-023",
+      "statement": "The 3 working day advance submission requirement does not apply to sick leave.",
+      "rtype": "constraint",
+      "inferred": false,
+      "quotes": [
+        "Leave requests must be submitted at least 3 working days before the start date, except for sick leave"
+      ]
+    },
+    {
+      "id": "EX-024",
+      "statement": "The notice period requirement must accommodate genuine emergencies such as illness without penalizing employees.",
+      "rtype": "business",
+      "inferred": false,
+      "quotes": [
+        "Adequate notice helps teams plan around absences while still accommodating genuine emergencies such as illness",
+        "without penalizing employees who fall ill unexpectedly"
+      ]
+    },
+    {
+      "id": "EX-025",
+      "statement": "The advance notice requirement must provide managers with reasonable planning time for anticipated absences.",
+      "rtype": "business",
+      "inferred": false,
+      "quotes": [
+        "The intent is to give managers reasonable planning time",
+        "Adequate notice helps teams plan around absences"
+      ]
+    }
+  ],
+  "open_questions": [
+    {
+      "type": "critic_rejected",
+      "statement": "The system shall present only the leave types for which the employee is eligible on the request form.",
+      "reason": "The source says 'typically presenting only the leave types for which the employee is eligible,' implying this is the usual but not mandatory behavior, whereas the candidate requirement states it as an absolute 'shall' obligation.",
+      "location": "3.1 Leave Request",
+      "doc_id": "brd"
+    },
+    {
+      "type": "inferred",
+      "statement": "The system shall display accurate leave balances to employees.",
+      "reason": "implied; no verbatim quote in this chunk",
+      "location": "3.3 Balances",
+      "doc_id": "brd"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+Project Horizon — Discovery Call: Browse, Search & Checkout
+Date: 3 March 2026, 11:00 IST
+Attendees: Karan Malhotra (Product), Ananya Bose (Growth), Dev Prasad (Engineering), facilitator (CommerceForge)
+
+Facilitator: Let's cover how people find and buy things. Karan, what's the core?
+
+Karan: Browsing and finding products. On the product listing page people want to combine filters —
+brand, price and rating at once — and see how many results each option has. And search needs
+autocomplete as you type, with some tolerance for small spelling mistakes.
+
+Karan: On the product page, each size/colour is its own SKU with its own stock, so the variant picker
+resolves to a specific SKU and add-to-cart adds that SKU. Show the price inclusive of tax on the page.
+
+Facilitator: Cart and checkout?
+
+Karan: The cart should persist across sessions for a logged-in customer. Checkout should be short:
+address, delivery method, a review with the totals and taxes, then payment, then confirmation.
+
+Ananya: The one I'll push for is guest checkout — let people check out with just email and address,
+and offer to create an account afterwards. The BRD still lists this as "open" — Meera hasn't signed off.
+
+Karan: Noted as open; we'll resolve it.
+
+Facilitator: Good — that's browse, search, product detail, cart and the checkout shape. Payments and tax
+are a separate thread with Finance and the vendor.

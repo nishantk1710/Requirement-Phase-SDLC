@@ -1,0 +1,60 @@
+# ─── Secrets & environment ───────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── Python ──────────────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ─── Node / frontend (Vite + React + TS) ─────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Runtime data, databases & generated output ──────────────────────────
+data/
+handoff/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# ─── LLM response caches ─────────────────────────────────────────────────
+.cache/
+.cache_probe*/
+.consolidate_cache/
+
+# ─── Logs ────────────────────────────────────────────────────────────────
+*.log
+
+# ─── OS & editor cruft ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~

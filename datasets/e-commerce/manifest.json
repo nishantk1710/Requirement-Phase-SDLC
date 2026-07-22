@@ -1,0 +1,14 @@
+{
+  "domain": "e-commerce",
+  "project": "Project Horizon — Vantage Retail Online Store",
+  "description": "Real-format requirement inputs (Word BRD/NFR/intake, email threads, discovery-call transcript, Jira backlog export).",
+  "docs": [
+    { "doc_id": "brd",            "source_type": "brd",        "file": "BRD_ProjectHorizon_v0.3_DRAFT.docx" },
+    { "doc_id": "nfr_security",   "source_type": "brd",        "file": "NFR_Security_Addendum_ProjectHorizon.docx" },
+    { "doc_id": "ops_intake",     "source_type": "brd",        "file": "Ops_Intake_Form_ProjectHorizon.docx" },
+    { "doc_id": "discovery",      "source_type": "transcript", "file": "Discovery_Call_Search_and_Browse_2026-02-11.txt" },
+    { "doc_id": "email_legal",    "source_type": "email",      "file": "Email_Thread_Legal_Compliance.txt" },
+    { "doc_id": "email_payments", "source_type": "email",      "file": "Email_Thread_Payments_Checkout_Tax.txt" },
+    { "doc_id": "backlog",        "source_type": "form",       "file": "Product_Backlog_Export_HORIZON.csv" }
+  ]
+}

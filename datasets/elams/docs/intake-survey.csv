@@ -1,0 +1,7 @@
+question_id,question,response
+role,What is your role?,Employee
+cancel_behavior,What should happen when you cancel an approved leave?,The days should be credited back to my balance automatically.
+balance_visibility,How would you like to see your leave balance?,I want to see my leave balance on the home screen without clicking anything.
+current_tracking,How does your team currently track attendance?,On a shared spreadsheet that breaks all the time.
+language_need,Any language requirements for the app?,"It must work in the regional languages, at least Hindi and Marathi."
+biggest_pain,What is your biggest frustration with leave today?,Approvals get stuck whenever my manager is travelling.

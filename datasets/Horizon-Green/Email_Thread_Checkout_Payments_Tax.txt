@@ -1,0 +1,47 @@
+From: Karan Malhotra <karan.m@vantageretail.in>
+To: Tarun Shetty <tarun@commerceforge.dev>; Priyanka Sethi <priyanka.sethi@vantageretail.in>
+Date: Wed, 4 Mar 2026 10:12 IST
+Subject: Checkout, payments & tax — how we're building it
+
+Tarun, Priyanka,
+
+Two things to lock: how we handle payments in the build, and what Finance needs on tax/invoicing.
+On payments, Vantage will onboard the payment provider and do the KYC ourselves — I don't want the
+build blocked waiting on our merchant account.
+
+Karan
+
+------------------------------------------------------------------------------------------
+
+From: Tarun Shetty <tarun@commerceforge.dev>
+To: Karan Malhotra <karan.m@vantageretail.in>; Priyanka Sethi <priyanka.sethi@vantageretail.in>
+Date: Wed, 4 Mar 2026 13:40 IST
+Subject: RE: Checkout, payments & tax — how we're building it
+
+Karan — clean way to scope it:
+
+- We build a provider-agnostic payment module behind one interface, with a built-in test-mode mock that
+  simulates success, failure and pending. So the whole checkout and order flow is fully built and
+  testable now, with no live keys. Going live is a configuration change, not a code change.
+- Flow rule: an order is NOT confirmed until the payment callback confirms success. If payment fails,
+  times out or is pending, the customer keeps their cart and can retry.
+
+Tarun
+
+------------------------------------------------------------------------------------------
+
+From: Priyanka Sethi <priyanka.sethi@vantageretail.in>
+To: Karan Malhotra <karan.m@vantageretail.in>; Tarun Shetty <tarun@commerceforge.dev>
+Date: Thu, 5 Mar 2026 09:20 IST
+Subject: RE: RE: Checkout, payments & tax — how we're building it
+
+Finance side:
+
+- Every order must generate a GST tax invoice as a downloadable PDF, with the correct tax split.
+- The price shown to the customer is tax-inclusive, but the invoice must still show the tax breakup.
+- A refund must be recorded against the order.
+
+On returns, the window should be 7 days from a books point of view — though CX is pushing for 10. Let's
+settle 7 vs 10 before it goes into the spec.
+
+Priyanka

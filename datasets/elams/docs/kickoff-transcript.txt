@@ -1,0 +1,52 @@
+ELAMS - Employee Leave & Attendance Management System
+Project Kickoff Meeting - Transcript
+Date: 2026-07-08
+Attendees: Priya (Product Lead), Raj (Business Analyst), Sandra (HR Head)
+Format: Conf Room 2 + Teams (hybrid)
+Note: auto-transcribed, lightly cleaned up. Timestamps approximate.
+
+---
+
+[00:01] Priya: Okay so, um, can everyone hear me on the bridge? Sandra, you're a bit quiet on my end.
+[00:01] Sandra: Yeah, yeah, I'm here. Just walking into a proper room, give me one sec.
+[00:02] Priya: No worries. Right. So this is the kickoff for ELAMS, the leave and attendance thing. Thanks for making time, I know everyone's calendars are a mess this week.
+[00:02] Raj: Ha, tell me about it. I've got like three things stacked on top of each other right now.
+[00:03] Priya: Okay so let me just set the scene a bit. We're replacing that old leave tool, you know, the one that emails everybody on a Monday morning?
+[00:03] Sandra: Oh god, the Monday digest. People have very strong feelings about that email.
+[00:03] Raj: Some folks love it, some filter it straight to trash. We can figure out later if we keep that or not.
+[00:04] Priya: Right, let's park it for now. So the big theme I keep hearing is approvals. Managers basically live in their inbox. We need managers to be able to approve or reject requests directly from the email notification. That's kind of the headline for me, honestly.
+[00:04] Sandra: Yes. A hundred percent. They will not log into a separate portal, I promise you that.
+[00:05] Raj: Makes sense. And, um, honestly for the small stuff - like, for casual leave of just one day, it should auto-approve without any manager step. Just my opinion, not gospel, save everyone the clicks.
+[00:05] Priya: Hmm. That's interesting, but, um, I thought the brief said route every request to the manager? Let's not decide that here, just flag it.
+[00:06] Raj: Fair, flagging it. Just throwing it out there.
+[00:06] Sandra: I mean, HR would at least want to see the trail even if it's automatic. But yeah, park that too.
+[00:07] Priya: Okay, so the other thing, and I'll be honest this one's deliberately a bit fuzzy right now, the approval flow needs to be flexible enough to handle different departments. Sales does things nothing like, you know, the factory floor.
+[00:07] Sandra: Very differently. Don't even get me started on the shift teams.
+[00:08] Raj: Yeah we'll have to dig into that properly. Different chains, maybe different levels. Related thing though - if the manager is on leave themselves, it should go to their manager. That comes up constantly, people just get stuck.
+[00:08] Sandra: Yes! That is literally my number one complaint. Manager's travelling and the request just sits there rotting for a week.
+[00:09] Priya: Okay that's a good one, Raj, write that down properly, not just in the margins.
+[00:09] Raj: On it, on it.
+[00:10] Sandra: Can I jump in with the people side of things?
+[00:10] Priya: Please, go.
+[00:10] Sandra: So, um, my whole ask really is simplicity. Like, a new joiner should be able to figure out how to apply for leave without any training. We onboard a lot of folks and I am not running a workshop just for the leave screen.
+[00:11] Priya: Love that. That's more of a north star than a spec, but I'll absolutely take it.
+[00:11] Raj: Noting it as a, um, guiding principle.
+[00:12] Sandra: With the old one you basically needed a PDF guide open next to you. Nobody ever read it.
+[00:12] Priya: Right. Okay, what about access - login, mobile, all of that?
+[00:12] Raj: So on login, we're assuming everyone already has a company SSO account. The old tool never handled passwords itself, it just piggybacked on SSO, so I think we carry that forward.
+[00:13] Priya: Good. Keep that, but write it up as an assumption, not a decision, in case IT wants to push back.
+[00:13] Raj: Yep, it goes under assumptions.
+[00:14] Sandra: Mobile though - the old thing had zero mobile access and half my workforce doesn't sit at a desk.
+[00:14] Priya: Yeah, that's going to come up. Let's not scope it in the kickoff, but note it as a want. Ish.
+[00:14] Raj: "Mobile - TBD." Classic.
+[00:15] Priya: Okay, we're already at fifteen, let me not blow the whole hour. Ownership. Raj, can you own pulling all this into a proper doc, the BRD update?
+[00:15] Raj: Yeah, I'll take the BRD. I'll get a draft round by, um, end of next week? Wednesday-ish.
+[00:16] Priya: Wednesday works. Sandra, can you get me the list of departments and their, like, weird approval quirks?
+[00:16] Sandra: I can, but honestly some of it lives in people's heads, not in any document. Give me till Friday.
+[00:16] Priya: Friday's fine. I'll own the vision one-pager and the stakeholder map.
+[00:17] Raj: Do we want a follow-up specifically with IT? For the SSO thing and the holiday calendar question.
+[00:17] Priya: Yes, good call. There's still an open question on whether we reuse the existing holiday calendar or build a new one, and I don't want to answer that without IT in the room.
+[00:18] Sandra: Please loop me in on that, holidays get weirdly political with the regional offices.
+[00:18] Priya: Will do. Okay, um, anything else burning before we drop?
+[00:18] Raj: Nothing from me, I'll send the notes out.
+[00:19] Priya: Great, thanks both. I'll get the recording and Raj's notes out this afternoon. Cheers everyone, bye!

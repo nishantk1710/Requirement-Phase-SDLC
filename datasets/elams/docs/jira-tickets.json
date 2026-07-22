@@ -1,0 +1,37 @@
+[
+  {
+    "key": "ELAMS-9",
+    "type": "Story",
+    "summary": "Raise a leave request",
+    "description": "As an employee I want to raise a leave request with a leave type and start/end dates.",
+    "labels": ["leave", "mvp"]
+  },
+  {
+    "key": "ELAMS-14",
+    "type": "Story",
+    "summary": "Attach medical certificate to sick leave",
+    "description": "Allow employees to attach a medical certificate (PDF) to sick-leave requests.",
+    "labels": ["sick-leave"]
+  },
+  {
+    "key": "ELAMS-22",
+    "type": "Story",
+    "summary": "Leave data privacy",
+    "description": "Employees must only see their own leave data, not their colleagues' data.",
+    "labels": ["security", "privacy"]
+  },
+  {
+    "key": "ELAMS-31",
+    "type": "Task",
+    "summary": "Data retention compliance",
+    "description": "Must comply with the company data-retention policy DRP-2024.",
+    "labels": ["compliance"]
+  },
+  {
+    "key": "ELAMS-40",
+    "type": "Question",
+    "summary": "Holiday calendar clarification",
+    "description": "Do we reuse the existing public-holiday calendar module, or build a new one?",
+    "labels": ["question"]
+  }
+]

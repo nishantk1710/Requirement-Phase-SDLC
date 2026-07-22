@@ -1,0 +1,307 @@
+{
+  "found": [
+    {
+      "statement": "An employee can submit a leave request specifying leave type, start date, and end date.",
+      "doc_id": "brd",
+      "evidence_sentence": "The system shall allow an employee to submit a leave request specifying leave type, start date, and end date.",
+      "implicit": false
+    },
+    {
+      "statement": "The leave request form presents only the leave types for which the employee is eligible.",
+      "doc_id": "brd",
+      "evidence_sentence": "The request form is the primary entry point into the leave lifecycle, typically presenting only the leave types for which the employee is eligible.",
+      "implicit": true
+    },
+    {
+      "statement": "Each submitted leave request is routed to the employee's direct manager for approval.",
+      "doc_id": "brd",
+      "evidence_sentence": "The system shall route each submitted leave request to the employee's direct manager for approval.",
+      "implicit": false
+    },
+    {
+      "statement": "Managers have a dedicated queue of pending requests, ordered so that the earliest start dates come first.",
+      "doc_id": "brd",
+      "evidence_sentence": "Managers will see pending requests in a dedicated queue, ordered so that the earliest start dates are easiest to act on first.",
+      "implicit": false
+    },
+    {
+      "statement": "An employee cannot request more leave days than their available balance for the selected leave type.",
+      "doc_id": "brd",
+      "evidence_sentence": "An employee may not request more leave days than their available balance for the selected leave type.",
+      "implicit": false
+    },
+    {
+      "statement": "Balances are tracked per leave category, with separate balances for casual, sick, and earned leave (not a single pooled figure).",
+      "doc_id": "brd",
+      "evidence_sentence": "Each employee has a separate balance for casual, sick, and earned leave.",
+      "implicit": false
+    },
+    {
+      "statement": "When a request is approved the system deducts the leave days from the employee's balance, and the deduction occurs only after final approval, not on submission.",
+      "doc_id": "brd",
+      "evidence_sentence": "When a leave request is approved, the system shall deduct the leave days from the employee's balance. The deduction shall occur only after final approval, not on submission.",
+      "implicit": false
+    },
+    {
+      "statement": "Leave requests must be submitted at least 3 working days before the start date, except for sick leave.",
+      "doc_id": "brd",
+      "evidence_sentence": "Leave requests must be submitted at least 3 working days before the start date, except for sick leave.",
+      "implicit": false
+    },
+    {
+      "statement": "The system sends an email notification to the employee when their leave request is approved or rejected.",
+      "doc_id": "brd",
+      "evidence_sentence": "The system shall send an email notification to the employee when their leave request is approved or rejected.",
+      "implicit": false
+    },
+    {
+      "statement": "Earned leave accrues at 1.5 days per completed month of continuous service.",
+      "doc_id": "brd",
+      "evidence_sentence": "Earned leave shall accrue at 1.5 days per completed month of service.",
+      "implicit": false
+    },
+    {
+      "statement": "The leave dashboard should load quickly for all users (performance quality, unquantified).",
+      "doc_id": "brd",
+      "evidence_sentence": "The leave dashboard should load quickly for all users.",
+      "implicit": false
+    },
+    {
+      "statement": "The system requires multi-factor authentication for all manager and HR-admin logins.",
+      "doc_id": "brd",
+      "evidence_sentence": "The system shall require multi-factor authentication for all manager and HR-admin logins.",
+      "implicit": false
+    },
+    {
+      "statement": "The system is accessible on mobile browsers (Chrome and Safari) at 375px width.",
+      "doc_id": "brd",
+      "evidence_sentence": "The system shall be accessible on mobile browsers (Chrome and Safari) at 375px width.",
+      "implicit": false
+    },
+    {
+      "statement": "The system retains an audit log of every leave approval and rejection for at least 7 years.",
+      "doc_id": "brd",
+      "evidence_sentence": "The system shall retain an audit log of every leave approval and rejection for at least 7 years.",
+      "implicit": false
+    },
+    {
+      "statement": "All employee and leave data must be stored within the India (Asia-South) region.",
+      "doc_id": "brd",
+      "evidence_sentence": "All employee and leave data shall be stored within the India (Asia-South) region.",
+      "implicit": false
+    },
+    {
+      "statement": "The system integrates with the existing HRMS via its REST API for employee master data.",
+      "doc_id": "brd",
+      "evidence_sentence": "The system shall integrate with the existing HRMS via its REST API for employee master data.",
+      "implicit": false
+    },
+    {
+      "statement": "Scope is limited to the leave lifecycle for full-time employees.",
+      "doc_id": "brd",
+      "evidence_sentence": "ELAMS covers the end-to-end leave lifecycle for full-time employees: requesting leave, manager approval, balance tracking, notifications, and reporting for HR administrators.",
+      "implicit": false
+    },
+    {
+      "statement": "The system provides reporting for HR administrators.",
+      "doc_id": "brd",
+      "evidence_sentence": "ELAMS covers the end-to-end leave lifecycle for full-time employees: requesting leave, manager approval, balance tracking, notifications, and reporting for HR administrators.",
+      "implicit": false
+    },
+    {
+      "statement": "The system serves three user groups: employees, their direct managers, and the HR-admin group.",
+      "doc_id": "brd",
+      "evidence_sentence": "The system will serve employees, their direct managers, and the HR-admin group, and is expected to be used from both desktop and mobile browsers.",
+      "implicit": false
+    },
+    {
+      "statement": "The system is usable from both desktop and mobile browsers.",
+      "doc_id": "brd",
+      "evidence_sentence": "The system will serve employees, their direct managers, and the HR-admin group, and is expected to be used from both desktop and mobile browsers.",
+      "implicit": false
+    },
+    {
+      "statement": "Payroll processing, timesheet billing, and public-holiday calendar administration are out of scope; ELAMS consumes but does not manage those data sources.",
+      "doc_id": "brd",
+      "evidence_sentence": "Payroll processing, timesheet billing, and public-holiday calendar administration are out of scope for this release and will continue to be handled by their existing owners; ELAMS will consume, but not manage, those data sources where needed.",
+      "implicit": false
+    },
+    {
+      "statement": "Assumption: authoritative employee records, including the reporting lines used to determine each employee's direct manager, are owned by the existing HRMS and are reasonably up to date.",
+      "doc_id": "brd",
+      "evidence_sentence": "It is assumed that authoritative employee records — including reporting lines used to determine each employee's direct manager — are owned by the existing HRMS and are reasonably up to date.",
+      "implicit": false
+    },
+    {
+      "statement": "Assumption: a corporate email service and a single-sign-on identity provider are already available to build upon.",
+      "doc_id": "brd",
+      "evidence_sentence": "It is further assumed that a corporate email service and a single-sign-on identity provider are already available for the organization to build upon.",
+      "implicit": false
+    },
+    {
+      "statement": "Dependency: the public-holiday and working-day calendar is provided by the existing HR calendar source and treated as a reference input.",
+      "doc_id": "brd",
+      "evidence_sentence": "The public-holiday and working-day calendar is expected to be provided by the existing HR calendar source and treated as a reference input.",
+      "implicit": false
+    },
+    {
+      "statement": "The system must be able to evaluate the notice period in working days (excluding weekends/holidays), which requires using the working-day calendar.",
+      "doc_id": "brd",
+      "evidence_sentence": "Leave requests must be submitted at least 3 working days before the start date, except for sick leave.",
+      "implicit": true
+    },
+    {
+      "statement": "Managers can approve or reject requests directly from the email notification.",
+      "doc_id": "kickoff",
+      "evidence_sentence": "We need managers to be able to approve or reject requests directly from the email notification.",
+      "implicit": false
+    },
+    {
+      "statement": "The approval flow must be flexible/configurable to handle different departments (different chains and possibly multiple approval levels).",
+      "doc_id": "kickoff",
+      "evidence_sentence": "the approval flow needs to be flexible enough to handle different departments.",
+      "implicit": false
+    },
+    {
+      "statement": "If a manager is on leave, the request should route (escalate) to that manager's manager.",
+      "doc_id": "kickoff",
+      "evidence_sentence": "if the manager is on leave themselves, it should go to their manager.",
+      "implicit": false
+    },
+    {
+      "statement": "The leave application must be simple enough that a new joiner can apply for leave without any training (usability goal).",
+      "doc_id": "kickoff",
+      "evidence_sentence": "a new joiner should be able to figure out how to apply for leave without any training.",
+      "implicit": false
+    },
+    {
+      "statement": "Proposed (flagged/undecided): single-day casual leave should auto-approve without any manager step.",
+      "doc_id": "kickoff",
+      "evidence_sentence": "for casual leave of just one day, it should auto-approve without any manager step.",
+      "implicit": false
+    },
+    {
+      "statement": "HR wants an approval trail retained even for requests that are approved automatically.",
+      "doc_id": "kickoff",
+      "evidence_sentence": "I mean, HR would at least want to see the trail even if it's automatic.",
+      "implicit": true
+    },
+    {
+      "statement": "Assumption: all users already have a company SSO account and the system continues to rely on SSO rather than managing passwords itself.",
+      "doc_id": "kickoff",
+      "evidence_sentence": "we're assuming everyone already has a company SSO account. The old tool never handled passwords itself, it just piggybacked on SSO, so I think we carry that forward.",
+      "implicit": false
+    },
+    {
+      "statement": "HR reports must generate in under 10 seconds even for 5,000 employees.",
+      "doc_id": "emails",
+      "evidence_sentence": "reports for HR must generate in under 10 seconds even for 5,000 employees.",
+      "implicit": false
+    },
+    {
+      "statement": "HR can export the monthly attendance summary as an Excel file.",
+      "doc_id": "emails",
+      "evidence_sentence": "HR should be able to export the monthly attendance summary as an Excel file.",
+      "implicit": false
+    },
+    {
+      "statement": "Business rule (HR view, contested): unused casual leave lapses at the end of the calendar year and must not carry over.",
+      "doc_id": "emails",
+      "evidence_sentence": "unused casual leave should lapse at the end of the calendar year and must not carry over.",
+      "implicit": false
+    },
+    {
+      "statement": "Business rule (Ops view, contested): employees may carry over up to 5 unused casual leave days into the following year, per the handbook.",
+      "doc_id": "emails",
+      "evidence_sentence": "employees have always been allowed to carry over up to 5 unused casual leave days into the following year - it's written into the handbook, and honestly the floor staff would be pretty upset if we quietly took that away.",
+      "implicit": false
+    },
+    {
+      "statement": "The system must keep a clear, queryable history of approvals so HR/Ops can find out who approved a given leave.",
+      "doc_id": "emails",
+      "evidence_sentence": "If ELAMS just keeps a clear history of approvals, that alone saves us hours.",
+      "implicit": false
+    },
+    {
+      "statement": "When an employee cancels an approved leave, the days are credited back to their balance automatically.",
+      "doc_id": "survey",
+      "evidence_sentence": "The days should be credited back to my balance automatically.",
+      "implicit": false
+    },
+    {
+      "statement": "Employees can see their leave balance on the home screen without any clicks.",
+      "doc_id": "survey",
+      "evidence_sentence": "I want to see my leave balance on the home screen without clicking anything.",
+      "implicit": false
+    },
+    {
+      "statement": "The app must work in regional languages, at least Hindi and Marathi (localization).",
+      "doc_id": "survey",
+      "evidence_sentence": "It must work in the regional languages, at least Hindi and Marathi.",
+      "implicit": false
+    },
+    {
+      "statement": "The replacement must be reliable, unlike the current attendance spreadsheet that breaks frequently.",
+      "doc_id": "survey",
+      "evidence_sentence": "On a shared spreadsheet that breaks all the time.",
+      "implicit": true
+    },
+    {
+      "statement": "The system must maintain the underlying attendance/leave records needed to produce a monthly attendance summary.",
+      "doc_id": "emails",
+      "evidence_sentence": "HR should be able to export the monthly attendance summary as an Excel file.",
+      "implicit": true
+    },
+    {
+      "statement": "Employees can attach a medical certificate (PDF) to sick-leave requests.",
+      "doc_id": "jira",
+      "evidence_sentence": "Allow employees to attach a medical certificate (PDF) to sick-leave requests.",
+      "implicit": false
+    },
+    {
+      "statement": "Employees must only see their own leave data, not their colleagues' data.",
+      "doc_id": "jira",
+      "evidence_sentence": "Employees must only see their own leave data, not their colleagues' data.",
+      "implicit": false
+    },
+    {
+      "statement": "The system must comply with the company data-retention policy DRP-2024.",
+      "doc_id": "jira",
+      "evidence_sentence": "Must comply with the company data-retention policy DRP-2024.",
+      "implicit": false
+    },
+    {
+      "statement": "As-is behaviour (retention undecided): a weekly pending-approvals digest is emailed to managers every Monday at 9 AM.",
+      "doc_id": "legacy",
+      "evidence_sentence": "The old system emailed a weekly pending-approvals digest to managers every Monday at 9 AM.",
+      "implicit": true
+    },
+    {
+      "statement": "Half-day leave is supported and counted as 0.5 days (as-is behaviour expected to be preserved).",
+      "doc_id": "legacy",
+      "evidence_sentence": "Half-day leave is supported and counted as 0.5 days.",
+      "implicit": true
+    },
+    {
+      "statement": "Leave types are limited to casual, sick, and earned; there is no bereavement category.",
+      "doc_id": "legacy",
+      "evidence_sentence": "Leave types were casual, sick, and earned; there was never a bereavement category.",
+      "implicit": true
+    },
+    {
+      "statement": "The system should retain a nightly backup of its data (as-is behaviour expected to be preserved).",
+      "doc_id": "legacy",
+      "evidence_sentence": "It is a single-region on-prem install with a nightly backup.",
+      "implicit": true
+    }
+  ],
+  "contradictions_noticed": [
+    "Approval routing: the BRD requires routing EVERY request to the employee's direct manager, but the kickoff proposes auto-approving single-day casual leave with no manager step. It was explicitly flagged as undecided, and HR still wants an audit trail even if approval is automatic.",
+    "Casual-leave carry-over: Meera (email 4) says unused casual leave must lapse at year-end with no carry-over, while Anil (email 6) says the handbook allows carrying over up to 5 unused casual days. Unresolved; a HR/Ops/Finance meeting was requested.",
+    "Approval model: the BRD describes a single direct-manager approval, whereas the kickoff calls for a flexible, department-specific flow with different chains and possibly multiple approval levels (plus escalation to the manager's manager).",
+    "Mobile scope status: the BRD treats mobile-browser support as a firm in-scope requirement (scope statement plus a 375px Chrome/Safari NFR), but the kickoff treats mobile as an unscoped 'want / TBD'.",
+    "Holiday calendar: the BRD and the legacy notes assume the existing holiday calendar will be reused (settled), but the kickoff and Jira ELAMS-40 treat 'reuse vs build new' as an open, unresolved question.",
+    "Manager approval channel: the BRD describes a dedicated in-app pending-approvals queue for managers, while the kickoff insists managers will not log into a separate portal and must approve/reject from the email itself.",
+    "Deployment/access model: the legacy notes describe an on-prem, corporate-network-only system with no public-internet exposure and no mobile access, which conflicts with the to-be requirements for mobile-browser access for a largely deskless workforce and India (Asia-South) cloud-region data storage."
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "rga-review-ui",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Minimal RGA human-review UI (P6): table + accept/edit/reject + generation gate.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.59.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.2",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.9",
+    "vitest": "^4.1.10"
+  }
+}

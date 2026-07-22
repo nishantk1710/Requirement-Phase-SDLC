@@ -1,0 +1,12 @@
+{
+  "domain": "Employee Leave & Attendance Management System (ELAMS)",
+  "version": "1.0",
+  "docs": [
+    {"doc_id": "brd", "file": "docs/brd.md", "source_type": "brd"},
+    {"doc_id": "kickoff", "file": "docs/kickoff-transcript.txt", "source_type": "transcript"},
+    {"doc_id": "emails", "file": "docs/emails.md", "source_type": "email"},
+    {"doc_id": "survey", "file": "docs/intake-survey.csv", "source_type": "form"},
+    {"doc_id": "jira", "file": "docs/jira-tickets.json", "source_type": "jira"},
+    {"doc_id": "legacy", "file": "docs/legacy-notes.md", "source_type": "legacy"}
+  ]
+}

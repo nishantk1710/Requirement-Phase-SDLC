@@ -1,0 +1,48 @@
+# RGA PoC — application configuration.
+# Secrets (API keys/endpoints) live in .env, NEVER here. See .env.example.
+#
+# provider: which LLM backend the whole pipeline uses. Change ONLY this line to swap.
+#   mock    -> no credentials needed (tests / local dev; returns scripted output)
+#   foundry -> Claude via Azure AI Foundry (needs ANTHROPIC_FOUNDRY_API_KEY in .env)  <-- the real one
+#   azure   -> Azure OpenAI (needs AZURE_OPENAI_* in .env)
+#   claude  -> Anthropic direct (Wave-2 stub for now)
+# Default stays 'mock' so the test suite runs without any key. Set to 'foundry' to use Claude.
+provider: mock
+
+# Claude on Azure AI Foundry — the model we actually use. Only the API key is secret (.env).
+foundry:
+  endpoint: "https://gaura-mgt924zq-eastus2.services.ai.azure.com/anthropic/"
+  deployment: claude-sonnet-4-6
+
+azure:
+  deployment: gpt-4o
+  api_version: "2024-08-01-preview"
+
+claude:
+  model: claude-opus-4-8
+
+llm:
+  temperature: 0.0
+  max_tokens: 2048
+  max_attempts: 3        # retry attempts on transient errors / timeouts
+  base_backoff_s: 0.5    # exponential backoff base (seconds)
+  timeout_s: 60          # per-attempt timeout; a hung call trips this
+  max_repair: 2          # structured(): re-prompt attempts to fix invalid JSON
+
+store:
+  path: ./data/rga.db
+
+loop:
+  max_passes: 3          # bounded convergence loop cap (anti-runaway)
+
+# SRS / RTM Word (.docx) deliverable styling (Part K). Full defaults live in
+# generate/docx_style.py::DOCX_STYLE; set only the keys you want to override here (deep-merged).
+# These are DOCUMENT styles for the deliverable — independent of the product design tokens in §3.1.
+docx:
+  font: Times New Roman
+  # Example overrides (uncomment to change sizes/colours):
+  # styles:
+  #   "Heading 1": { size: 18, color: "1F3A5F" }
+  # table:
+  #   header_fill: "1F3A5F"
+  #   header_text: "FFFFFF"

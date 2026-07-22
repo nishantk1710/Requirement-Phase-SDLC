@@ -1,0 +1,102 @@
+Vantage Retail — Project Horizon
+Product Discovery call — "how do people find stuff"
+Auto-transcript (Meet) — may contain errors
+Wed, 11 Feb 2026, 3:30 PM
+
+Present: Karan Malhotra (Product), Ananya Bose (Growth), Dev Prasad (Eng),
+         Tarun Shetty (CommerceForge)
+
+------------------------------------------------------------------------
+
+Karan: okay so this call is just about discovery and browse. Not checkout, not
+payments, we'll do those separately. Just — how does someone land on the site and
+actually find the thing they want. Ananya you had a lot of thoughts.
+
+Ananya: yeah okay so the biggest one, and I cannot stress this enough, is filtering.
+Our current site you pick one category and that's it, you're stuck. People shop
+across categories, they want to filter by like, multiple things at once. Price, brand,
+whatever attributes the product has. You know how the big marketplaces let you stack
+filters — tick three brands, a price range, a rating, and it just narrows down live?
+That. We need that.
+
+Karan: so multi-attribute filtering. Faceted, is that the word Tarun—
+
+Tarun: faceted navigation, yeah. Facets. Each attribute becomes a filter you can
+combine. It works best if the product data is clean and tagged properly, which... is
+a separate conversation.
+
+Ananya: right and it has to update the count, like "Brand X (24)" so you know how many
+before you click. And on mobile it can't be a nightmare.
+
+Dev: the counts get expensive at scale but doable. Noted.
+
+Ananya: search itself is the other thing. Right now our search is garbage. If you spell
+something slightly wrong you get nothing. I want it to, you know, suggest as you type.
+Autocomplete. And handle synonyms — if someone types "sneakers" and we call them
+"trainers" or whatever, still find it.
+
+Karan: typeahead plus synonym handling. And what happens on zero results? Because right
+now it's just a dead end.
+
+Ananya: yeah don't show a blank page. Show something — "did you mean", or popular items,
+or related. Anything but a dead end, that's just a bounce.
+
+Tarun: we usually wire that to show fallback recommendations on a no-results page.
+
+Karan: good. Sorting?
+
+Ananya: obviously. Price low-high, high-low, newest, popularity, maybe relevance as the
+default. Standard stuff.
+
+Karan: okay. What else on discovery.
+
+Ananya: ooh — comparison. Let people put like two or three products side by side and
+compare the specs. Especially for the higher-consideration categories. People do a lot
+of comparing before they buy.
+
+Karan: a compare feature. Hmm, that might be a stretch for v1 but let me note it. Not
+sure it makes the cut.
+
+Ananya: note it note it.
+
+Karan: noted. [laughs]
+
+Dev: while we're here — navigation. Breadcrumbs so people don't get lost, and the
+category tree needs to be manageable by the team, not hardcoded. That ties into the
+admin side though, different conversation.
+
+Karan: yeah park the admin bit. Breadcrumbs, noted.
+
+Ananya: two more and I'll stop. One, once someone's looking at a product, show them
+related things — "you might also like", "people also viewed", that kind of rail. It
+drives a stupid amount of revenue on other sites. Two... um. I had a second one.
+
+Karan: wishlist?
+
+Ananya: WISHLIST yes. Save for later. People aren't always ready to buy, let them save
+it and come back. I don't know if that's a discovery thing or an account thing but
+someone write it down.
+
+Karan: I'll write it down, we'll figure out where it lives.
+
+Dev: quick flag — a lot of this depends on how products are modelled. Variants, the
+attributes we filter on, all of that. That's not really this call.
+
+Karan: agreed, the product/data model is its own thing. For today I've got: faceted
+multi-attribute filtering with live counts, search typeahead, synonyms, no-results
+fallback, sorting, a maybe-compare feature, breadcrumbs, related-product rails, and
+wishlist as a maybe. That's a good haul.
+
+Ananya: oh and guest checkout — sorry that's not discovery but while I remember, please
+don't force people to sign up before they browse or buy, we lose so many that way.
+
+Karan: that's a checkout call, but yeah it keeps coming up, I'll flag it as open again.
+It's not decided.
+
+Ananya: it should be decided. In favour. Of guests.
+
+Karan: [laughs] noted, again.
+
+Dev: I'll drop off, thanks all.
+
+[ends]

@@ -1,0 +1,123 @@
+From: Karan Malhotra <karan.m@vantageretail.in>
+To: Priyanka Sethi <priyanka.sethi@vantageretail.in>; Tarun Shetty <tarun@commerceforge.dev>
+Cc: Dev Prasad <dev.prasad@vantageretail.in>
+Date: Thu, 12 Feb 2026 10:04 IST
+Subject: Checkout + payments — need to lock this down
+
+Hi Priyanka (Finance), Tarun,
+
+We need to nail the payment + checkout side. Discovery covered browse/search separately,
+this thread is just money. A few things I need answers on:
+
+1. What payment methods do we support at launch? Cards + UPI is the obvious minimum for us.
+   Netbanking? Wallets? And the big one — do we do Cash on Delivery? I know Ops has feelings.
+2. Which payment provider / gateway are we going with, and can Tarun confirm we're not
+   storing card data ourselves.
+3. Tax + invoicing — I assume there's a compliance requirement here, Priyanka can you spell
+   it out because I don't want to get this wrong.
+
+Trying to close by next week.
+
+Karan
+
+
+------------------------------------------------------------------------------------------
+
+From: Tarun Shetty <tarun@commerceforge.dev>
+To: Karan Malhotra <karan.m@vantageretail.in>; Priyanka Sethi <priyanka.sethi@vantageretail.in>
+Cc: Dev Prasad <dev.prasad@vantageretail.in>
+Date: Thu, 12 Feb 2026 13:47 IST
+Subject: RE: Checkout + payments — need to lock this down
+
+Karan,
+
+On the tech side:
+
+- We'll integrate a PSP's hosted checkout (redirect or embedded), so card details are
+  entered on the provider's side and tokenised there. Card numbers never hit our servers or
+  DB — that keeps PCI-DSS scope with the provider, which is what you want. We only keep a
+  token / transaction reference and the payment status against the order.
+- Recommend enabling saved cards for returning customers, but via the provider's tokenisation,
+  not us storing anything. Speeds up repeat checkout a lot.
+- Methods are mostly a config/enablement question with the provider — cards, UPI, netbanking,
+  wallets are all standard. COD is different, that's not a gateway thing, that's an operational
+  flow (collect cash, reconcile, handle non-delivery) and it needs Ops to own it.
+- Suggestion: keep checkout as few steps as possible. Address -> delivery -> pay. An express
+  path for logged-in users with a saved address + saved card is worth doing.
+
+One thing I need back: partial refunds. If someone returns one item out of a three-item order,
+do you want to refund just that line, or is it whole-order only? Affects how we structure it.
+
+Tarun
+
+
+------------------------------------------------------------------------------------------
+
+From: Priyanka Sethi <priyanka.sethi@vantageretail.in>
+To: Karan Malhotra <karan.m@vantageretail.in>; Tarun Shetty <tarun@commerceforge.dev>
+Cc: Dev Prasad <dev.prasad@vantageretail.in>
+Date: Fri, 13 Feb 2026 09:31 IST
+Subject: RE: RE: Checkout + payments — need to lock this down
+
+Hi both,
+
+Finance/compliance side — this is not optional:
+
+- Every order must produce a proper GST tax invoice. That means our GSTIN, the customer's
+  details, HSN/SAC codes per line item, and the correct tax breakup (CGST+SGST for intra-state,
+  IGST for inter-state). It has to be downloadable as a PDF and also emailed to the customer.
+- The price shown to the customer should be inclusive of tax (that's the norm here), but the
+  invoice must still show the split.
+- For refunds we need a credit note generated, not just a silent reversal, for our books.
+
+Partial refunds — yes, we absolutely need line-level / partial refunds. Whole-order-only will
+not work, people return single items all the time.
+
+On COD I'll defer to Ops but from a finance view COD is a reconciliation headache and has
+higher return-to-origin rates, so if we do it I'd want it capped (e.g. not on high-value orders).
+
+Priyanka
+
+
+------------------------------------------------------------------------------------------
+
+From: Karan Malhotra <karan.m@vantageretail.in>
+To: Priyanka Sethi <priyanka.sethi@vantageretail.in>; Tarun Shetty <tarun@commerceforge.dev>;
+    Sameer Qureshi <sameer.q@vantageretail.in>
+Cc: Dev Prasad <dev.prasad@vantageretail.in>
+Date: Fri, 13 Feb 2026 11:58 IST
+Subject: RE: RE: RE: Checkout + payments — need to lock this down
+
+Adding Sameer (Ops) for the COD question specifically.
+
+Sameer — do we offer Cash on Delivery at launch or not? Priyanka's wary (reconciliation +
+returns), Ananya from Growth will push for it because a chunk of customers still prefer it.
+Your call operationally. If yes, we'll likely cap it on high-value orders.
+
+Summary of what's decided so far: hosted PSP checkout, no card storage on our side, saved
+cards via tokenisation, cards + UPI + netbanking + wallets at launch, GST invoice PDF +
+emailed + credit notes for refunds, partial/line-level refunds supported, express checkout
+for logged-in users.
+
+Still open: COD (Sameer), and the exact provider (I'll pick between the shortlist next week —
+leaning to whoever gives best UPI + saved-card support).
+
+Karan
+
+
+------------------------------------------------------------------------------------------
+
+From: Sameer Qureshi <sameer.q@vantageretail.in>
+To: Karan Malhotra <karan.m@vantageretail.in>
+Cc: Priyanka Sethi <priyanka.sethi@vantageretail.in>; Tarun Shetty <tarun@commerceforge.dev>;
+    Dev Prasad <dev.prasad@vantageretail.in>
+Date: Fri, 13 Feb 2026 16:20 IST
+Subject: RE: RE: RE: RE: Checkout + payments — need to lock this down
+
+Karan — honestly I'm 50/50 on COD. It drives orders but the RTO (return to origin) losses are
+real and it's manual to reconcile. My compromise: offer it, but cap it (agree with Priyanka),
+and not for first-time customers with no history. Let me think and I'll put the full ops
+detail — including COD, stock, shipping, the lot — into that intake form you sent, rather than
+this thread. Easier to keep it all in one place there.
+
+Sameer

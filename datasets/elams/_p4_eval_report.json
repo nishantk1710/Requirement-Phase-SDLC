@@ -1,0 +1,97 @@
+{
+  "recall_test": {
+    "n_target": 11,
+    "n_extracted": 41,
+    "recall_explicit": 0.944,
+    "recall_implicit": 1.0,
+    "precision_grounded": 0.268,
+    "per_difficulty": {
+      "explicit": 1.0,
+      "multi-span": 1.0,
+      "implicit": 1.0,
+      "ambiguous": 1.0,
+      "duplicate": 1.0,
+      "conflicting": 0.5
+    },
+    "captured": 10,
+    "partial": 1,
+    "missed": 0,
+    "verdicts": {
+      "REQ-003": {
+        "gold_id": "REQ-003",
+        "status": "captured",
+        "coverage": 1.0,
+        "matched_extracted_id": "EX-001"
+      },
+      "REQ-005": {
+        "gold_id": "REQ-005",
+        "status": "captured",
+        "coverage": 1.0,
+        "matched_extracted_id": "EX-008"
+      },
+      "REQ-007": {
+        "gold_id": "REQ-007",
+        "status": "captured",
+        "coverage": 1.0,
+        "matched_extracted_id": "EX-014"
+      },
+      "REQ-011": {
+        "gold_id": "REQ-011",
+        "status": "captured",
+        "coverage": 1.0,
+        "matched_extracted_id": "EX-003"
+      },
+      "REQ-014": {
+        "gold_id": "REQ-014",
+        "status": "captured",
+        "coverage": 1.0,
+        "matched_extracted_id": "EX-018"
+      },
+      "REQ-016": {
+        "gold_id": "REQ-016",
+        "status": "partial",
+        "coverage": 0.58,
+        "matched_extracted_id": "EX-023"
+      },
+      "REQ-019": {
+        "gold_id": "REQ-019",
+        "status": "captured",
+        "coverage": 1.0,
+        "matched_extracted_id": "EX-024"
+      },
+      "REQ-023": {
+        "gold_id": "REQ-023",
+        "status": "captured",
+        "coverage": 1.0,
+        "matched_extracted_id": "EX-027"
+      },
+      "REQ-028": {
+        "gold_id": "REQ-028",
+        "status": "captured",
+        "coverage": 1.0,
+        "matched_extracted_id": "EX-031"
+      },
+      "REQ-031": {
+        "gold_id": "REQ-031",
+        "status": "captured",
+        "coverage": 0.69,
+        "matched_extracted_id": "EX-036"
+      },
+      "REQ-035": {
+        "gold_id": "REQ-035",
+        "status": "captured",
+        "coverage": 1.0,
+        "matched_extracted_id": "EX-042"
+      }
+    }
+  },
+  "precision_all": 0.415,
+  "n_extracted": 41,
+  "go_no_go": {
+    "verdict": "pending_human_baseline",
+    "tool_recall": 0.944,
+    "reason": "human baseline not yet recorded (BA session dependency)",
+    "required_recall": null
+  },
+  "open_questions": 7
+}
