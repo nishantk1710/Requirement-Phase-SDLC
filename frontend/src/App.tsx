@@ -414,6 +414,7 @@ export function App() {
               </p>
             )}
 
+            <div className="tablewrap">
             <table>
               <thead>
                 <tr>
@@ -436,6 +437,7 @@ export function App() {
                 ))}
               </tbody>
             </table>
+            </div>
             </details>
             <SpotCheck pid={pid} />
           </>

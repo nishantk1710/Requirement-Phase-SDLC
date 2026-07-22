@@ -273,6 +273,9 @@ header.topbar .brand { cursor: pointer; }
 .bulkbar { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* tables */
+/* The wide review table scrolls horizontally WITHIN its own box, so it can never push the page
+   layout out or clip the Decision column — every column stays reachable. */
+.tablewrap { max-width: 100%; overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
 thead th {
   text-align: left; color: var(--faint); font-weight: 600; font-size: 11.5px; text-transform: uppercase;
@@ -280,9 +283,11 @@ thead th {
 }
 tbody td { padding: 10px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
 tbody tr:hover { background: var(--bg-soft); }
+.statement { max-width: 340px; min-width: 220px; overflow-wrap: anywhere; }
 .statement span { font-weight: 500; }
 .statement textarea { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 8px; font: inherit; }
 .conf { color: var(--muted); font-variant-numeric: tabular-nums; }
+.quotes { max-width: 300px; overflow-wrap: anywhere; }
 .quotes blockquote { margin: 0 0 4px; padding-left: 10px; border-left: 2px solid var(--border);
   color: var(--muted); font-style: italic; font-size: 12px; }
 .actions { display: flex; gap: 6px; flex-wrap: wrap; }
