@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Landing } from "./Landing";
 import {
@@ -27,7 +27,6 @@ import {
   selectTechStack,
   uploadDocs,
   type Decision,
-  type GenStatus,
   type JobStatus,
   type Requirement,
   type ReviewAction,
@@ -176,7 +175,7 @@ export function App() {
   return (
     <div className="page">
       <header className="topbar">
-        <div className="brand" onClick={() => setEntered(false)} title="Back to home">◆ RGA</div>
+        <div className="brand" onClick={() => setEntered(false)} title="Back to home">RGA</div>
         <span className={`model ${mockProvider ? "warn" : ""}`}>model: {provider}</span>
         <span className="grow" />
         <label className="proj">
@@ -274,7 +273,7 @@ export function App() {
             {running ? "Starting…" : "Run the agent pipeline →"}
           </button>
         </div>
-        {run.isError && <p className="gate-blocked">⛔ Could not start the run: {(run.error as Error).message}</p>}
+        {run.isError && <p className="gate-blocked">Could not start the run: {(run.error as Error).message}</p>}
         {mockProvider && (
           <p className="gate-blocked">
             The server is in <b>mock</b> mode, so the agents can't extract. Restart with
@@ -290,7 +289,7 @@ export function App() {
         <h2>2 · Running the agent pipeline</h2>
         <p className="muted">Extraction, verification, consolidation and coverage — a few minutes on the first run (cached after, so re-runs are fast).</p>
         <PipelineProgress status={status.data} running={running} />
-        {status.data?.state === "error" && <p className="gate-blocked">⛔ {status.data.message}</p>}
+        {status.data?.state === "error" && <p className="gate-blocked">{status.data.message}</p>}
         {status.data?.state === "done" && (
           <div className="phase-cta"><button className="btn-primary lg" onClick={() => setPhase("review")}>Continue to review →</button></div>
         )}
@@ -316,9 +315,9 @@ export function App() {
             {generating ? "Generating…" : "Generate SRS / RTM"}
           </button>
         </div>
-        {gate.data && !gate.data.ready && <p className="gate-blocked">🔒 {gate.data.reason}</p>}
+        {gate.data && !gate.data.ready && <p className="gate-blocked">{gate.data.reason}</p>}
         {gate.data?.ready && list.data && allReqs.length > 0 && (
-          <p className="ready-note">✅ Every requirement is triaged — you can generate the SRS &amp; RTM now.</p>
+          <p className="ready-note">Every requirement is triaged — you can generate the SRS &amp; RTM now.</p>
         )}
 
         {/* clear the remaining pending requirements so you can proceed to generation */}
@@ -350,7 +349,7 @@ export function App() {
           </div>
         )}
         {(acceptAllM.isError || autoAcc.isError) && (
-          <p className="gate-blocked">⛔ {((acceptAllM.error || autoAcc.error) as Error).message}</p>
+          <p className="gate-blocked">{((acceptAllM.error || autoAcc.error) as Error).message}</p>
         )}
 
         {list.isLoading && <p>Loading…</p>}
@@ -372,9 +371,9 @@ export function App() {
             <div className="triage">
               <div className="tabs">
                 <button className={filter === "all" ? "on" : ""} onClick={() => setFilter("all")}>All ({allReqs.length})</button>
-                <button className={filter === "attention" ? "on" : ""} onClick={() => setFilter("attention")}>🔴 Attention ({attentionCount})</button>
-                <button className={filter === "review" ? "on" : ""} onClick={() => setFilter("review")}>🟡 Review ({reviewCount})</button>
-                <button className={filter === "routine" ? "on" : ""} onClick={() => setFilter("routine")}>🟢 Routine ({routineCount})</button>
+                <button className={filter === "attention" ? "on" : ""} onClick={() => setFilter("attention")}><span className="tdot attention" />Attention ({attentionCount})</button>
+                <button className={filter === "review" ? "on" : ""} onClick={() => setFilter("review")}><span className="tdot review" />Review ({reviewCount})</button>
+                <button className={filter === "routine" ? "on" : ""} onClick={() => setFilter("routine")}><span className="tdot routine" />Routine ({routineCount})</button>
               </div>
               <div className="bulkbar">
                 <button
@@ -409,7 +408,7 @@ export function App() {
             {acceptAllM.isSuccess && <p className="muted">Accepted all {acceptAllM.data.accepted} pending requirement(s).</p>}
             {(acceptAllM.isError || autoAcc.isError || bulk.isError) && (
               <p className="gate-blocked">
-                ⛔ Action failed: {((acceptAllM.error || autoAcc.error || bulk.error) as Error).message}.
+                Action failed: {((acceptAllM.error || autoAcc.error || bulk.error) as Error).message}.
                 If this is a 404, restart the server (`python -m rga serve --provider foundry`) so it has the latest endpoints.
               </p>
             )}
@@ -450,9 +449,14 @@ export function App() {
       <section className="panel">
         <div className="reviewhead">
           <h2>4 · Generated documents</h2>
+          {genStatus.data?.state === "done" && (
+            (genStatus.data.manifest as { traceability_complete?: boolean } | undefined)?.traceability_complete
+              ? <span className="ok">{genStatus.data.count} approved requirement(s) · full traceability</span>
+              : <span className="gate-blocked">{genStatus.data.count} approved · traceability incomplete — a requirement is missing its source</span>
+          )}
           <button className="ghost" onClick={() => setPhase("review")}>← Back to review</button>
         </div>
-        {generate.isError && <p className="gate-blocked">⛔ {(generate.error as Error).message}</p>}
+        {generate.isError && <p className="gate-blocked">{(generate.error as Error).message}</p>}
         {genStatus.data && genStatus.data.state !== "done" && (
           <div className={`runstatus ${genStatus.data.state}`}>
             <span className="spinner" data-on={generating} /><b>Generation</b>
@@ -460,7 +464,7 @@ export function App() {
           </div>
         )}
         {genStatus.data?.state === "done"
-          ? <Results pid={pid} status={genStatus.data} />
+          ? <Results pid={pid} />
           : !generating && <p className="muted">No documents yet — go to Review and click <b>Generate SRS / RTM</b>.</p>}
       </section>
       )}
@@ -495,7 +499,7 @@ function PipelineProgress({ status, running }: { status?: JobStatus; running: bo
         const state = done || (idx >= 0 && i < idx) ? "done" : i === idx ? "active" : "pending";
         return (
           <div key={key} className={`pstage ${state}`}>
-            <span className="pdot">{state === "done" ? "✓" : ""}</span>
+            <span className="pdot" />
             <span className="plabel">{label}</span>
             {state === "active" && status?.message && <span className="pmsg muted small">{status.message}</span>}
           </div>
@@ -515,34 +519,117 @@ function download(name: string, content: string) {
   URL.revokeObjectURL(url);
 }
 
+// --- minimal, dependency-free Markdown renderer for the generated SRS/RTM preview ----------------
+// Renders the subset our generator emits (headings, bold/italic/code, bullet lists, GFM tables,
+// blockquotes) and swallows the docx-only [[TITLEPAGE]] / [[TOC]] markers so they never show raw.
+function mdInline(text: string, kb: string): ReactNode[] {
+  const out: ReactNode[] = [];
+  const re = /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`)/g;
+  let last = 0, i = 0, m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    const t = m[0];
+    if (t.startsWith("**")) out.push(<strong key={`${kb}-${i}`}>{t.slice(2, -2)}</strong>);
+    else if (t.startsWith("*")) out.push(<em key={`${kb}-${i}`}>{t.slice(1, -1)}</em>);
+    else out.push(<code key={`${kb}-${i}`}>{t.slice(1, -1)}</code>);
+    last = m.index + t.length; i++;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
+function Markdown({ text }: { text: string }) {
+  const out: ReactNode[] = [];
+  let table: string[] = [], list: string[] = [], title: string[] | null = null, k = 0;
+
+  const flushTable = () => {
+    if (!table.length) return;
+    const rows = table.map((r) =>
+      r.trim().replace(/^\|/, "").replace(/\|$/, "").split(/(?<!\\)\|/).map((c) => c.trim().replace(/\\\|/g, "|")));
+    table = [];
+    const cells = rows.filter((r) => !r.every((c) => /^:?-{2,}:?$/.test(c) || c === ""));
+    if (!cells.length) return;
+    const [head, ...body] = cells;
+    const kk = k++;
+    out.push(
+      <table key={`t${kk}`}>
+        <thead><tr>{head.map((c, j) => <th key={j}>{mdInline(c, `th${kk}-${j}`)}</th>)}</tr></thead>
+        <tbody>{body.map((row, ri) => (
+          <tr key={ri}>{head.map((_h, j) => <td key={j}>{mdInline(row[j] ?? "", `td${kk}-${ri}-${j}`)}</td>)}</tr>
+        ))}</tbody>
+      </table>,
+    );
+  };
+  const flushList = () => {
+    if (!list.length) return;
+    const items = list; list = [];
+    const kk = k++;
+    out.push(
+      <ul key={`u${kk}`}>{items.map((it, idx) => {
+        const indent = it.match(/^\s*/)?.[0].length ?? 0;
+        const body = it.replace(/^\s*[-*]\s+/, "");
+        return <li key={idx} style={indent >= 2 ? { marginLeft: (indent / 4) * 16 } : undefined}>{mdInline(body, `li${kk}-${idx}`)}</li>;
+      })}</ul>,
+    );
+  };
+
+  for (const raw of (text || "").split("\n")) {
+    const s = raw.trim();
+    if (s === "[[TITLEPAGE]]") { flushTable(); flushList(); title = []; continue; }
+    if (s === "[[/TITLEPAGE]]") {
+      const tb = title ?? []; title = null;
+      out.push(
+        <div className="titleblock" key={`tp${k++}`}>
+          {tb.map((ln, idx) => ln.startsWith("#")
+            ? <h1 key={idx}>{mdInline(ln.replace(/^#+\s*/, ""), `tph${idx}`)}</h1>
+            : <p key={idx}>{mdInline(ln, `tpp${idx}`)}</p>)}
+        </div>,
+      );
+      continue;
+    }
+    if (title !== null) { if (s) title.push(s); continue; }
+    if (s === "[[TOC]]" || s === "[[/TOC]]") continue;
+
+    if (s.startsWith("|")) { flushList(); table.push(raw); continue; }
+    flushTable();
+    if (/^\s*[-*]\s+/.test(raw)) { list.push(raw); continue; }
+    flushList();
+    if (!s || s === "---") continue;
+    const h = s.match(/^(#{1,4})\s+(.*)$/);
+    if (h) {
+      const inner = mdInline(h[2], `h${k}`), kk = k++;
+      out.push(h[1].length === 1 ? <h1 key={`h${kk}`}>{inner}</h1>
+        : h[1].length === 2 ? <h2 key={`h${kk}`}>{inner}</h2>
+        : h[1].length === 3 ? <h3 key={`h${kk}`}>{inner}</h3>
+        : <h4 key={`h${kk}`}>{inner}</h4>);
+      continue;
+    }
+    if (s.startsWith("> ")) { out.push(<blockquote key={`b${k++}`}>{mdInline(s.slice(2), `bq${k}`)}</blockquote>); continue; }
+    out.push(<p key={`p${k++}`}>{mdInline(s, `p${k}`)}</p>);
+  }
+  flushTable(); flushList();
+  return <div className="doc">{out}</div>;
+}
+
 type ArtifactTab = "SRS.md" | "RTM.md";   // pack = SRS + RTM only; Appendix C lives inside the SRS (Part J)
-function Results({ pid, status }: { pid: string; status: GenStatus }) {
+function Results({ pid }: { pid: string }) {
   const [tab, setTab] = useState<ArtifactTab>("SRS.md");
   const doc = useQuery({ queryKey: ["artifact", pid, tab], queryFn: () => getArtifact(pid, tab) });
-  const traceable = (status.manifest as { traceability_complete?: boolean } | undefined)?.traceability_complete;
   return (
-    <section className="panel">
-      <div className="reviewhead">
-        <h2>4 · Generated documents</h2>
-        {traceable
-          ? <span className="ok">✅ {status.count} approved requirement(s) · full traceability</span>
-          : <span className="gate-blocked">⚠️ {status.count} approved · traceability INCOMPLETE — a requirement is missing its source</span>}
-      </div>
-      <div className="tabs">
+    <>
+      <div className="tabs doctabs">
         <button className={tab === "SRS.md" ? "on" : ""} onClick={() => setTab("SRS.md")}>SRS (IEEE-830)</button>
         <button className={tab === "RTM.md" ? "on" : ""} onClick={() => setTab("RTM.md")}>Traceability Matrix</button>
         <button className="ghost" disabled={!doc.data} onClick={() => doc.data && download(tab, doc.data)}>Download .md</button>
         <a className="dl-docx" href={`/api/projects/${pid}/artifacts/${tab.replace(".md", ".docx")}`}>Download Word (.docx)</a>
         <span className="muted">saved to handoff/{pid}/ (.md + .docx)</span>
       </div>
-      <pre className="doc">
-        {doc.isLoading
-          ? "Loading…"
-          : doc.isError
-            ? `⛔ Could not load ${tab}: ${(doc.error as Error).message}`
-            : doc.data}
-      </pre>
-    </section>
+      {doc.isLoading
+        ? <div className="doc">Loading…</div>
+        : doc.isError
+          ? <div className="doc gate-blocked">Could not load {tab}: {(doc.error as Error).message}</div>
+          : <Markdown text={doc.data ?? ""} />}
+    </>
   );
 }
 
@@ -732,7 +819,7 @@ function Decisions({ pid, reqs, onResolved }: { pid: string; reqs: Requirement[]
         affects, and is saved (it won't reappear on reload).
       </p>
       {applyMsg && <p className="muted small">{applyMsg}</p>}
-      {applyAll.isError && <p className="gate-blocked">⛔ {(applyAll.error as Error).message}</p>}
+      {applyAll.isError && <p className="gate-blocked">{(applyAll.error as Error).message}</p>}
 
       {decisions.length > 0 && (
         <div className="tabs owners">
@@ -745,7 +832,7 @@ function Decisions({ pid, reqs, onResolved }: { pid: string; reqs: Requirement[]
       )}
 
       {open.length === 0 && (
-        <p className="ok done-note">✅ All decisions resolved — the clean requirements were auto-approved, and you've resolved the rest.</p>
+        <p className="ok done-note">All decisions resolved — the clean requirements were auto-approved, and you've resolved the rest.</p>
       )}
 
       {shown.map((d) => {
@@ -842,8 +929,8 @@ function TechStack({ pid }: { pid: string }) {
         </span>
       </div>
       {stated
-        ? <p className="ready-note">✅ A technology stack is stated in the source inputs — adopted as-is; no selection needed.</p>
-        : <p className="muted small">Candidates are simple, widely-used choices. The ★ recommended option is the default — change any, or pick <b>Other</b> to type your own, then generate.</p>}
+        ? <p className="ready-note">A technology stack is stated in the source inputs — adopted as-is; no selection needed.</p>
+        : <p className="muted small">Candidates are simple, widely-used choices. The recommended option is the default — change any, or pick <b>Other</b> to type your own, then generate.</p>}
       {ts.basis && <p className="muted small">{ts.basis}</p>}
       <div className="ts-aspects">
         {ts.aspects.map((a) => {
@@ -866,7 +953,7 @@ function TechStack({ pid }: { pid: string }) {
                       onChange={() => pick(a.key, c.name)}
                     />
                     <span className="ts-name">
-                      {c.name}{c.recommended && <em className="rec"> ★ Recommended</em>}
+                      {c.name}{c.recommended && <em className="rec"> Recommended</em>}
                     </span>
                     {c.reason && <span className="ts-reason muted small">{c.reason}</span>}
                   </label>

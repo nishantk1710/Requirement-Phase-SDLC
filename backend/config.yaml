@@ -7,7 +7,7 @@
 #   azure   -> Azure OpenAI (needs AZURE_OPENAI_* in .env)
 #   claude  -> Anthropic direct (Wave-2 stub for now)
 # Default stays 'mock' so the test suite runs without any key. Set to 'foundry' to use Claude.
-provider: mock
+provider: foundry
 
 # Claude on Azure AI Foundry — the model we actually use. Only the API key is secret (.env).
 foundry:

@@ -1,0 +1,13 @@
+{
+  "domain": "Horizon-Green",
+  "project": "Project Horizon — Storefront Rebuild (Green Build)",
+  "description": "Simplified 6-document e-commerce input set (reduced/consolidated): BRD, discovery-call transcript, checkout/payments/tax email thread, NFR & legacy notes, ops intake form, and a product-backlog export.",
+  "docs": [
+    { "doc_id": "BRD_Horizon_Green_v1",                        "source_type": "brd",  "file": "BRD_Horizon_Green_v1.docx" },
+    { "doc_id": "Discovery_Call_Browse_and_Checkout_2026-03-03", "source_type": "brd",  "file": "Discovery_Call_Browse_and_Checkout_2026-03-03.txt" },
+    { "doc_id": "Email_Thread_Checkout_Payments_Tax",          "source_type": "brd",  "file": "Email_Thread_Checkout_Payments_Tax.txt" },
+    { "doc_id": "NFR_and_Legacy_Notes",                        "source_type": "brd",  "file": "NFR_and_Legacy_Notes.md" },
+    { "doc_id": "Ops_Intake_Form_Horizon_Green",              "source_type": "brd",  "file": "Ops_Intake_Form_Horizon_Green.docx" },
+    { "doc_id": "Product_Backlog_Export_HORIZON_GREEN",        "source_type": "form", "file": "Product_Backlog_Export_HORIZON_GREEN.csv" }
+  ]
+}

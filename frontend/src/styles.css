@@ -270,6 +270,12 @@ header.topbar .brand { cursor: pointer; }
 .triage { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 16px 0 14px; }
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
 .tabs button { border-radius: 980px; font-size: 13px; }
+.doctabs { margin: 12px 0 14px; align-items: center; }
+/* triage status dots — clean CSS marks in place of coloured-circle emoji */
+.tdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }
+.tdot.attention { background: var(--danger); }
+.tdot.review { background: var(--warn); }
+.tdot.routine { background: var(--ok); }
 .bulkbar { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* tables */
@@ -354,12 +360,28 @@ tbody tr:hover { background: var(--bg-soft); }
 .spotcheck { margin-top: 14px; }
 .spotrow { border-bottom: 1px solid var(--border-soft); padding: 8px 0; }
 
-/* generated docs */
+/* generated docs — rendered markdown preview */
 .doc {
   background: var(--bg-soft); border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
-  padding: 18px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.6;
-  white-space: pre-wrap; max-height: 620px; overflow-y: auto;
+  padding: 20px 24px; max-height: 620px; overflow: auto;
+  font-size: 13.5px; line-height: 1.55; color: var(--text);
 }
+.doc > :first-child { margin-top: 0; }
+.doc h1 { font-size: 1.5rem; margin: 0 0 6px; }
+.doc h2 { font-size: 1.18rem; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border-soft); }
+.doc h3 { font-size: 1.02rem; margin: 16px 0 6px; }
+.doc h4 { font-size: 0.92rem; margin: 12px 0 4px; color: var(--muted); }
+.doc p { margin: 6px 0; }
+.doc ul { margin: 6px 0; padding-left: 22px; }
+.doc li { margin: 2px 0; }
+.doc blockquote { margin: 8px 0; padding: 2px 0 2px 12px; border-left: 3px solid var(--border); color: var(--muted); font-style: italic; }
+.doc code { font-family: var(--mono); background: rgba(0, 0, 0, 0.05); padding: 1px 5px; border-radius: 4px; font-size: 0.88em; }
+.doc table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12.5px; }
+.doc th, .doc td { border: 1px solid var(--border-soft); padding: 6px 9px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.doc th { background: var(--bg); font-weight: 600; }
+.doc .titleblock { text-align: center; padding: 10px 0 6px; }
+.doc .titleblock h1 { margin-bottom: 8px; }
+.doc .titleblock p { margin: 3px 0; color: var(--muted); }
 .muted { color: var(--muted); }
 .ok { color: var(--ok); }
 .warn { color: var(--warn); }

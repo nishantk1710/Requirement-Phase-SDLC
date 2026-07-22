@@ -1,10 +1,10 @@
 // Cinematic landing page — the entry into the RGA workspace. Clean, modern, Notion/Apple-inspired.
 
 const PHASES = [
-  { icon: "📥", title: "Input", body: "Drop in BRDs, call transcripts, emails, backlogs and forms (.docx / .pdf / .txt / .csv). Document structure is preserved." },
-  { icon: "🔎", title: "Extract & analyze", body: "Agents extract every requirement with a verbatim source quote, verify grounding, consolidate duplicates, and flag conflicts & gaps." },
-  { icon: "🧭", title: "Review by decision", body: "Clean items auto-approve. You confirm a handful of owner-routed decisions with recommendations — not hundreds of rows." },
-  { icon: "📄", title: "Generate", body: "A traceable IEEE-830 SRS, RTM, seed models and an open-questions appendix — from approved requirements only." },
+  { title: "Input", body: "Drop in BRDs, call transcripts, emails, backlogs and forms (.docx / .pdf / .txt / .csv). Document structure is preserved." },
+  { title: "Extract & analyze", body: "Agents extract every requirement with a verbatim source quote, verify grounding, consolidate duplicates, and flag conflicts & gaps." },
+  { title: "Review by decision", body: "Clean items auto-approve. You confirm a handful of owner-routed decisions with recommendations — not hundreds of rows." },
+  { title: "Generate", body: "A traceable IEEE-830 SRS, RTM and an open-questions appendix — from approved requirements only." },
 ];
 
 const GUARANTEES = [
@@ -20,7 +20,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
       <div className="landing-bg" aria-hidden />
 
       <header className="landing-nav">
-        <div className="brand">◆ RGA</div>
+        <div className="brand">RGA</div>
         <nav className="landing-links">
           <a href="#how">How it works</a>
           <a href="#trust">Guarantees</a>
@@ -52,7 +52,6 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
           {PHASES.map((p, i) => (
             <div className="card" key={p.title}>
               <div className="card-num">0{i + 1}</div>
-              <div className="card-icon">{p.icon}</div>
               <h3>{p.title}</h3>
               <p>{p.body}</p>
             </div>
