@@ -299,7 +299,8 @@ def cmd_serve(args) -> None:
     db = Database(cfg.store.path)
     repo = Repository(db)
     provider = _provider(args.cache, args.provider)  # used when the UI runs the pipeline / generates
-    dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+    # repo layout: <root>/backend/rga/cli.py and <root>/frontend/dist → three parents up to <root>.
+    dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
     app = create_app(repo, db=db, frontend_dir=dist, provider=provider)
     ui = f"http://{args.host}:{args.port}/" if dist.is_dir() else "(frontend not built; API only)"
     print(f"RGA UI on {ui}  |  API: http://{args.host}:{args.port}/api  |  model: {args.provider}  |  store: {cfg.store.path}")
