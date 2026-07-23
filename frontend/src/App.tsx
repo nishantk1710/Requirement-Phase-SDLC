@@ -8,14 +8,12 @@ import {
   autoAccept,
   deleteProject,
   getArtifact,
-  getCalibration,
   getConfig,
   getCorpora,
   getDecisions,
   getGate,
   getGenerateStatus,
   getRequirements,
-  getSpotCheck,
   getStatus,
   getTechStack,
   postGenerate,
@@ -62,6 +60,9 @@ export function App() {
   useEffect(() => {
     if (!corpus && corpora.data?.corpora.length) setCorpus(corpora.data.corpora[0].path);
   }, [corpora.data, corpus]);
+
+  // the currently-selected document set — so the user can SEE exactly what they are ingesting
+  const selectedCorpus = (corpora.data?.corpora ?? []).find((c) => c.path === corpus);
 
   // reload recovery (F8): on first mount, resume an in-flight or completed run/generation so a page
   // refresh doesn't strand the user on Input while work is running — or finished — on the server.
@@ -263,6 +264,34 @@ export function App() {
           {upload.isPending && <span className="muted">uploading…</span>}
           {upload.isSuccess && <span className="ok">uploaded {upload.data.docs.length} doc(s)</span>}
         </div>
+
+        {/* what's actually being ingested — the metadata of every file in the selected set */}
+        {selectedCorpus && (selectedCorpus.files?.length ?? 0) > 0 && (
+          <div className="filemeta">
+            <div className="filemeta-head">
+              <span>Documents in <b>{selectedCorpus.id}</b></span>
+              <span className="muted small">{selectedCorpus.files!.length} file(s) · {selectedCorpus.kind}</span>
+            </div>
+            <div className="tablewrap">
+              <table>
+                <thead>
+                  <tr><th>#</th><th>File</th><th>Format</th><th>Size</th></tr>
+                </thead>
+                <tbody>
+                  {selectedCorpus.files!.map((f, i) => (
+                    <tr key={`${f.doc_id}:${f.name}`}>
+                      <td className="muted">{i + 1}</td>
+                      <td className="fname">{f.name}</td>
+                      <td className="fext">{f.ext}</td>
+                      <td className="muted">{f.size}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         <div className="phase-cta">
           <button
             className="btn-primary lg"
@@ -306,51 +335,8 @@ export function App() {
               {Object.entries(gate.data.counts).filter(([, n]) => n > 0).map(([k, n]) => `${k}: ${n}`).join("  ·  ")}
             </span>
           )}
-          <button
-            className="generate"
-            disabled={!gate.data?.ready || generating}
-            title={gate.data?.reason}
-            onClick={() => generate.mutate()}
-          >
-            {generating ? "Generating…" : "Generate SRS / RTM"}
-          </button>
         </div>
-        {gate.data && !gate.data.ready && <p className="gate-blocked">{gate.data.reason}</p>}
-        {gate.data?.ready && list.data && allReqs.length > 0 && (
-          <p className="ready-note">Every requirement is triaged — you can generate the SRS &amp; RTM now.</p>
-        )}
-
-        {/* clear the remaining pending requirements so you can proceed to generation */}
-        {list.data && pending.length > 0 && (
-          <div className="reviewbar">
-            <span className="muted small">
-              {pending.length} requirement(s) still need a decision — resolve the decisions below, or clear the rest here:
-            </span>
-            <div className="bulkbar">
-              <button
-                className="btn-primary sm"
-                disabled={busy || routineCount === 0}
-                title="Approve the clean, high-confidence, routine requirements (each logged)"
-                onClick={() => autoAcc.mutate()}
-              >
-                {autoAcc.isPending ? "Approving…" : `Auto-accept routine (${routineCount})`}
-              </button>
-              <button
-                disabled={busy || pending.length === 0}
-                title="Approve every remaining pending requirement (each logged)"
-                onClick={() => {
-                  if (window.confirm(`Approve ALL ${pending.length} remaining requirement(s) without individual review?`))
-                    acceptAllM.mutate();
-                }}
-              >
-                {acceptAllM.isPending ? "Approving…" : `Approve all remaining (${pending.length})`}
-              </button>
-            </div>
-          </div>
-        )}
-        {(acceptAllM.isError || autoAcc.isError) && (
-          <p className="gate-blocked">{((acceptAllM.error || autoAcc.error) as Error).message}</p>
-        )}
+        <p className="muted">Work top to bottom: read the requirements, resolve the decisions, pick the technology stack — the actions to clear the rest and generate the SRS/RTM are at the bottom of the page.</p>
 
         {list.isLoading && <p>Loading…</p>}
         {list.data && allReqs.length === 0 && (
@@ -418,8 +404,7 @@ export function App() {
               <thead>
                 <tr>
                   <th><input type="checkbox" checked={allSelected} onChange={toggleAll} title="select all shown" /></th>
-                  <th>Status</th><th>Triage</th><th>Why</th><th>Requirement</th><th>Owner</th><th>Type</th><th>Priority</th><th>Conf.</th>
-                  <th>Source quote</th><th>Flags</th><th>Decision</th>
+                  <th>Requirement</th><th>Why flagged</th><th>Source quote</th><th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -438,7 +423,49 @@ export function App() {
             </table>
             </div>
             </details>
-            <SpotCheck pid={pid} />
+
+            {/* all page-level actions live at the BOTTOM — after reading the requirements + picking the stack */}
+            <div className="reviewfooter">
+              {gate.data && !gate.data.ready && <p className="gate-blocked">{gate.data.reason}</p>}
+              {gate.data?.ready && <p className="ready-note">Every requirement is triaged — you can generate the SRS &amp; RTM now.</p>}
+              {pending.length > 0 && (
+                <p className="muted small">{pending.length} requirement(s) still awaiting review — resolve the decisions above, or clear the rest here before generating.</p>
+              )}
+              {(acceptAllM.isError || autoAcc.isError) && (
+                <p className="gate-blocked">{((acceptAllM.error || autoAcc.error) as Error).message}</p>
+              )}
+              <div className="footer-actions">
+                <div className="footer-left">
+                  <button
+                    className="btn-ghost"
+                    disabled={busy || routineCount === 0}
+                    title="Approve the clean, high-confidence, routine requirements (each logged)"
+                    onClick={() => autoAcc.mutate()}
+                  >
+                    {autoAcc.isPending ? "Approving…" : `Auto-accept routine (${routineCount})`}
+                  </button>
+                  <button
+                    className="btn-ghost"
+                    disabled={busy || pending.length === 0}
+                    title="Approve every remaining pending requirement (each logged)"
+                    onClick={() => {
+                      if (window.confirm(`Approve ALL ${pending.length} remaining requirement(s) without individual review?`))
+                        acceptAllM.mutate();
+                    }}
+                  >
+                    {acceptAllM.isPending ? "Approving…" : `Approve all remaining (${pending.length})`}
+                  </button>
+                </div>
+                <button
+                  className="btn-primary lg"
+                  disabled={!gate.data?.ready || generating}
+                  title={gate.data?.reason}
+                  onClick={() => generate.mutate()}
+                >
+                  {generating ? "Generating…" : "Generate SRS / RTM →"}
+                </button>
+              </div>
+            </div>
           </>
         )}
       </section>
@@ -454,7 +481,6 @@ export function App() {
               ? <span className="ok">{genStatus.data.count} approved requirement(s) · full traceability</span>
               : <span className="gate-blocked">{genStatus.data.count} approved · traceability incomplete — a requirement is missing its source</span>
           )}
-          <button className="ghost" onClick={() => setPhase("review")}>← Back to review</button>
         </div>
         {generate.isError && <p className="gate-blocked">{(generate.error as Error).message}</p>}
         {genStatus.data && genStatus.data.state !== "done" && (
@@ -507,16 +533,6 @@ function PipelineProgress({ status, running }: { status?: JobStatus; running: bo
       })}
     </div>
   );
-}
-
-function download(name: string, content: string) {
-  const blob = new Blob([content], { type: "text/markdown" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 // --- minimal, dependency-free Markdown renderer for the generated SRS/RTM preview ----------------
@@ -620,9 +636,8 @@ function Results({ pid }: { pid: string }) {
       <div className="tabs doctabs">
         <button className={tab === "SRS.md" ? "on" : ""} onClick={() => setTab("SRS.md")}>SRS (IEEE-830)</button>
         <button className={tab === "RTM.md" ? "on" : ""} onClick={() => setTab("RTM.md")}>Traceability Matrix</button>
-        <button className="ghost" disabled={!doc.data} onClick={() => doc.data && download(tab, doc.data)}>Download .md</button>
-        <a className="dl-docx" href={`/api/projects/${pid}/artifacts/${tab.replace(".md", ".docx")}`}>Download Word (.docx)</a>
-        <span className="muted">saved to handoff/{pid}/ (.md + .docx)</span>
+        <span className="muted small dl-note">saved to handoff/{pid}/ (.md + .docx)</span>
+        <a className="dl-docx dl-right" href={`/api/projects/${pid}/artifacts/${tab.replace(".md", ".docx")}`} download>Download (.docx)</a>
       </div>
       {doc.isLoading
         ? <div className="doc">Loading…</div>
@@ -651,48 +666,48 @@ function Row({
   return (
     <tr className={`status-${r.status}`}>
       <td>{selectable && <input type="checkbox" checked={selected} onChange={onToggle} />}</td>
-      <td><span className={`badge ${r.status}`}>{r.status}</span></td>
-      <td>
-        <span className={`badge triage-${r.triage?.level ?? "review"}`} title={(r.triage?.reasons ?? []).join("; ") || "clear, grounded, high-confidence"}>
-          {r.triage?.level ?? "—"}
-        </span>
-      </td>
-      <td className="why muted">{(r.triage?.reasons ?? []).join("; ") || "—"}</td>
       <td className="statement">
         {editing ? (
           <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} />
         ) : (
           <>
-            <span>{r.statement}</span>
-            {r.inferred && <span className="tag inferred">inferred</span>}
+            <div className="stmt-text">
+              {r.statement}
+              {r.inferred && <span className="tag inferred">inferred</span>}
+            </div>
+            <div className="stmt-meta">
+              <span className={`badge ${r.status}`}>{r.status}</span>
+              <span className="tag">{r.rtype}</span>
+              {r.priority && <span className={`tag prio-${r.priority}`}>{r.priority}</span>}
+              <span className={`badge triage-${r.triage?.level ?? "review"}`}
+                    title={(r.triage?.reasons ?? []).join("; ") || "clear, grounded, high-confidence"}>
+                {r.triage?.level ?? "review"}
+              </span>
+              {r.conflicts_with?.length > 0 && (
+                <span className="tag flag" title={`conflicts with ${r.conflicts_with.join(", ")}`}>conflict</span>
+              )}
+              {flags.map((f) => <span key={f} className="tag flag">{f}</span>)}
+            </div>
           </>
         )}
       </td>
-      <td className="muted">{r.owner}</td>
-      <td>{r.rtype}</td>
-      <td>{r.priority ? <span className={`tag prio-${r.priority}`}>{r.priority}</span> : <span className="ok">—</span>}</td>
-      <td className="conf" title="recorded for calibration — not used to gate">{r.confidence.toFixed(2)}</td>
+      <td className="why muted">{(r.triage?.reasons ?? []).join("; ") || "—"}</td>
       <td className="quotes">
         {r.sources.map((s, i) => (
           <blockquote key={i} title={`${s.doc_id} · ${s.location}`}>“{s.quote}”</blockquote>
         ))}
       </td>
-      <td className="flags">
-        {r.conflicts_with?.length > 0 && <span className="tag flag" title={`conflicts with ${r.conflicts_with.join(", ")}`}>conflict</span>}
-        {flags.map((f) => <span key={f} className="tag flag">{f}</span>)}
-        {flags.length === 0 && !r.conflicts_with?.length && <span className="ok">—</span>}
-      </td>
       <td className="actions">
         {editing ? (
           <>
-            <button disabled={busy || !draft.trim()} onClick={() => { onReview("edit", { statement: draft }); setEditing(false); }}>
+            <button className="btn-primary sm" disabled={busy || !draft.trim()} onClick={() => { onReview("edit", { statement: draft }); setEditing(false); }}>
               Save &amp; approve
             </button>
             <button className="ghost" onClick={() => { setDraft(r.statement); setEditing(false); }}>Cancel</button>
           </>
         ) : (
           <>
-            <button disabled={busy} onClick={() => onReview("accept")}>Accept</button>
+            <button className="btn-primary sm" disabled={busy} onClick={() => onReview("accept")}>Accept</button>
             <button disabled={busy} className="ghost" onClick={() => setEditing(true)}>Edit</button>
             <button disabled={busy} className="danger" onClick={() => onReview("reject")}>Reject</button>
           </>
@@ -802,17 +817,6 @@ function Decisions({ pid, reqs, onResolved }: { pid: string; reqs: Requirement[]
       <div className="reviewhead">
         <h3>Decisions to make</h3>
         <span className="dcount">{open.length} open · {resolvedCount} resolved</span>
-        <button
-          className="btn-primary sm"
-          disabled={applyAll.isPending || open.length === 0}
-          title="Apply every open decision's recommended verdict at once (saved server-side)"
-          onClick={() => {
-            if (window.confirm(`Apply the recommended verdict to all ${open.length} open decision(s)?`))
-              applyAll.mutate();
-          }}
-        >
-          {applyAll.isPending ? "Applying…" : `Apply all recommended (${open.length})`}
-        </button>
       </div>
       <p className="muted small">
         Confirm the recommendation or override — resolving a decision applies to every requirement it
@@ -838,6 +842,7 @@ function Decisions({ pid, reqs, onResolved }: { pid: string; reqs: Requirement[]
       {shown.map((d) => {
         const b = busy === d.id;
         const addKind = d.kind === "gap" || d.kind === "possible_miss";
+        const recB = /\bkeep\s*b\b|option\s*b\b/i.test(d.recommended);  // which side the recommendation favours
         const affectedStmts = d.affected.map((id) => stmtOf.get(id)).filter(Boolean) as string[];
         return (
           <div key={d.id} className={`decision tier-${d.tier}`}>
@@ -858,24 +863,25 @@ function Decisions({ pid, reqs, onResolved }: { pid: string; reqs: Requirement[]
             <div className="dactions">
               {d.kind === "conflict" && d.affected.length === 2 ? (
                 <>
-                  <button className={recommendsExclude(d) ? "" : "btn-primary sm"} disabled={b}
-                    onClick={() => keep(d, d.affected[0], d.affected[1], "kept-a")}>Keep A · reject B</button>
-                  <button disabled={b} onClick={() => keep(d, d.affected[1], d.affected[0], "kept-b")}>Keep B · reject A</button>
+                  <button className={recB ? "" : "btn-primary sm"} disabled={b}
+                    onClick={() => keep(d, d.affected[0], d.affected[1], "kept-a")}>Keep A</button>
+                  <button className={recB ? "btn-primary sm" : ""} disabled={b}
+                    onClick={() => keep(d, d.affected[1], d.affected[0], "kept-b")}>Keep B</button>
                 </>
               ) : addKind ? (
                 addBox(d)
               ) : d.affected.length > 0 ? (
                 recommendsExclude(d) ? (
                   <>
-                    <button className="btn-primary sm danger-p" disabled={b}
-                      onClick={() => bulk(d, d.affected, "reject", "excluded")}>Exclude — reject {d.affected.length}</button>
-                    <button disabled={b} onClick={() => bulk(d, d.affected, "accept", "included")}>Include — accept {d.affected.length}</button>
+                    <button className="btn-primary sm" disabled={b}
+                      onClick={() => bulk(d, d.affected, "reject", "excluded")}>Exclude ({d.affected.length})</button>
+                    <button disabled={b} onClick={() => bulk(d, d.affected, "accept", "included")}>Include ({d.affected.length})</button>
                   </>
                 ) : (
                   <>
                     <button className="btn-primary sm" disabled={b}
-                      onClick={() => bulk(d, d.affected, "accept", "included")}>Include — accept {d.affected.length}</button>
-                    <button disabled={b} onClick={() => bulk(d, d.affected, "reject", "excluded")}>Exclude — reject {d.affected.length}</button>
+                      onClick={() => bulk(d, d.affected, "accept", "included")}>Include ({d.affected.length})</button>
+                    <button disabled={b} onClick={() => bulk(d, d.affected, "reject", "excluded")}>Exclude ({d.affected.length})</button>
                   </>
                 )
               ) : (
@@ -885,6 +891,22 @@ function Decisions({ pid, reqs, onResolved }: { pid: string; reqs: Requirement[]
           </div>
         );
       })}
+      {open.length > 0 && (
+        <div className="decisions-footer">
+          <span className="muted small">Reviewed everything? Apply the recommended verdict to all open decisions at once.</span>
+          <button
+            className="btn-primary"
+            disabled={applyAll.isPending}
+            title="Apply every open decision's recommended verdict at once (saved server-side)"
+            onClick={() => {
+              if (window.confirm(`Apply the recommended verdict to all ${open.length} open decision(s)?`))
+                applyAll.mutate();
+            }}
+          >
+            {applyAll.isPending ? "Applying…" : `Apply all recommended (${open.length})`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -980,17 +1002,13 @@ function TechStack({ pid }: { pid: string }) {
                       className="ts-other-input"
                       type="text"
                       autoFocus
-                      placeholder="Type a technology, e.g. Python + FastAPI, MongoDB, JWT…"
+                      placeholder="Type a technology, then press Enter (e.g. Python + FastAPI, MongoDB, JWT)…"
                       value={otherText[a.key] ?? (isCustom ? (chosen ?? "") : "")}
                       disabled={busy === a.key}
                       onChange={(e) => setOtherText((s) => ({ ...s, [a.key]: e.target.value }))}
                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submitOther(a.key); } }}
+                      onBlur={() => submitOther(a.key)}
                     />
-                    <button
-                      className="ghost"
-                      disabled={busy === a.key || !(otherText[a.key] ?? "").trim()}
-                      onClick={() => submitOther(a.key)}
-                    >Use this</button>
                   </div>
                 )}
               </div>
@@ -1003,31 +1021,3 @@ function TechStack({ pid }: { pid: string }) {
   );
 }
 
-function SpotCheck({ pid }: { pid: string }) {
-  const spot = useQuery({ queryKey: ["spotcheck", pid], queryFn: () => getSpotCheck(pid), enabled: false });
-  const cal = useQuery({ queryKey: ["calibration", pid], queryFn: () => getCalibration(pid), enabled: false });
-  return (
-    <details className="spotcheck">
-      <summary>QA — spot-check auto-approved &amp; calibration</summary>
-      <div className="bulkbar">
-        <button className="ghost" onClick={() => void spot.refetch()}>Load 5% spot-check</button>
-        <button className="ghost" onClick={() => void cal.refetch()}>Load calibration</button>
-      </div>
-      {spot.data && (
-        <p className="muted">{spot.data.auto_approved} auto-approved · showing {spot.data.sample.length} sampled for QA.</p>
-      )}
-      {spot.data?.sample.map((r) => (
-        <div key={r.id} className="spotrow">
-          <div>{r.statement}</div>
-          <div className="muted small">conf {r.confidence.toFixed(2)}{r.sources[0]?.quote ? ` · “${r.sources[0].quote}”` : ""}</div>
-        </div>
-      ))}
-      {cal.data && (
-        <p className="muted small">
-          Acceptance by confidence band — {Object.entries(cal.data.bands).map(([b, v]) => `${b}: ${v.acceptance_rate ?? "—"} (${v.decided})`).join("  ·  ")}.
-          Suggested auto-approve bar: <b>{cal.data.suggested_auto_approve_bar}</b>.
-        </p>
-      )}
-    </details>
-  );
-}

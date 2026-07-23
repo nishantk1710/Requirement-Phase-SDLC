@@ -10,6 +10,11 @@ This document is written for a review team: it describes the **system**, the **f
 the **inputs and outputs**, the **end-to-end flow**, **every API endpoint and its role**, and the
 **logs** the system emits.
 
+> **Integrating RGA into the combined SDLC frontend?** See **[`INTEGRATION.md`](INTEGRATION.md)** —
+> the dedicated contract for the unified UI: full flow, inputs/outputs, **every API endpoint** with
+> request/response shapes, and **exactly which progress signals/logs to surface** (and which to
+> keep server‑side). The sections below cover the same ground for the review team.
+
 The codebase is split into two apps that run with **separate commands**:
 
 - **`backend/`** — Python pipeline + FastAPI API (extraction, grounding, analysis, review gate, SRS/RTM generation, LangGraph orchestration).

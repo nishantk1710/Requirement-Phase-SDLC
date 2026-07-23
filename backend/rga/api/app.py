@@ -106,6 +106,38 @@ def _infer_type(filename: str) -> str:
     return _EXT_TYPE.get(Path(filename).suffix.lower(), "brd")
 
 
+def _human_size(n: int | None) -> str:
+    """Bytes -> a compact human-readable size for the input-file metadata view."""
+    if n is None:
+        return "—"
+    size = float(n)
+    for unit in ("B", "KB", "MB"):
+        if size < 1024:
+            return f"{int(size)} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} GB"
+
+
+def _corpus_files(base: Path, docs: list[dict]) -> list[dict]:
+    """Per-file metadata for a corpus so the UI can show the user exactly what they are ingesting
+    (name, kind, format, size). Reads the manifest's `docs` and stats the real files on disk."""
+    files = []
+    for doc in docs:
+        rel = doc.get("file") or ""
+        name = Path(rel).name if rel else str(doc.get("doc_id", "") or "document")
+        fpath = (base / rel) if rel else None
+        size = fpath.stat().st_size if (fpath and fpath.exists()) else None
+        files.append({
+            "doc_id": doc.get("doc_id", ""),
+            "name": name,
+            "type": doc.get("source_type") or _infer_type(name),
+            "ext": (Path(name).suffix.lower().lstrip(".") or "—"),
+            "size_bytes": size,
+            "size": _human_size(size),
+        })
+    return files
+
+
 def _req_view(r: Requirement) -> dict:
     """UI projection of a requirement — includes the source quote(s) so a reviewer always
     decides WITH the evidence in front of them."""
@@ -175,10 +207,12 @@ def create_app(
                 if not man.exists():
                     continue
                 try:
-                    docs = [x["doc_id"] for x in json.loads(man.read_text(encoding="utf-8")).get("docs", [])]
+                    docs = json.loads(man.read_text(encoding="utf-8")).get("docs", [])
                 except Exception:
                     docs = []
-                out.append({"id": d.name, "path": d.as_posix(), "docs": docs, "kind": kind})
+                files = _corpus_files(d, docs)
+                out.append({"id": d.name, "path": d.as_posix(),
+                            "docs": [f["doc_id"] for f in files], "files": files, "kind": kind})
         return {"corpora": out}
 
     # ---- input: upload ----------------------------------------------------

@@ -147,7 +147,15 @@ export const getArtifact = async (pid: string, name: string): Promise<string> =>
 };
 
 // --- pipeline (input → run → progress) --------------------------------------
-export interface Corpus { id: string; path: string; docs: string[]; kind: string }
+export interface CorpusFile {
+  doc_id: string;
+  name: string;
+  type: string;
+  ext: string;
+  size_bytes: number | null;
+  size: string;
+}
+export interface Corpus { id: string; path: string; docs: string[]; files?: CorpusFile[]; kind: string }
 export interface JobStatus {
   state: string;   // idle | running | done | error
   stage: string;   // starting | ingesting | extracting | analyzing | done | error

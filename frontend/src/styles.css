@@ -219,6 +219,7 @@ header.topbar .brand { cursor: pointer; }
 .pstage .plabel { font-weight: 500; color: var(--muted); }
 .pstage .pmsg { margin-left: auto; text-align: right; max-width: 46%; }
 .pstage.done .pdot { background: var(--ok); border-color: var(--ok); color: #fff; }
+.pstage.done .pdot::after { content: "✓"; line-height: 1; }   /* completed steps show a tick, not just a fill */
 .pstage.done .plabel { color: var(--text); }
 .pstage.active { background: var(--accent-tint); }
 .pstage.active .pdot { border-color: var(--accent); border-top-color: transparent; animation: spin .8s linear infinite; }
@@ -236,6 +237,20 @@ header.topbar .brand { cursor: pointer; }
   border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; background: #fff;
 }
 .or { color: var(--faint); font-size: 13px; }
+
+/* input-file metadata — shows the user exactly what documents they are ingesting */
+.filemeta { margin-top: 16px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.filemeta-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  padding: 10px 14px; background: var(--accent-tint); border-bottom: 1px solid var(--border); font-weight: 600; }
+.filemeta table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.filemeta th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px;
+  text-transform: uppercase; letter-spacing: .03em; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.filemeta td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.filemeta tbody tr:last-child td { border-bottom: none; }
+.filemeta .fname { font-weight: 500; color: var(--text); }
+.filemeta .fext { text-transform: uppercase; color: var(--muted); font-variant: small-caps; }
+.filemeta .ftype { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px;
+  background: var(--accent-tint); color: var(--accent-ink); border: 1px solid var(--border); }
 
 .reviewhead { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .reviewhead h2, .reviewhead h3 { margin-right: auto; }
@@ -277,6 +292,23 @@ header.topbar .brand { cursor: pointer; }
 .tdot.review { background: var(--warn); }
 .tdot.routine { background: var(--ok); }
 .bulkbar { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* bottom action bar — all page-level review actions live here, after reading + tech-stack */
+.reviewfooter { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--border); }
+.footer-actions { display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+.footer-left { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* "Apply all recommended" sits at the BOTTOM of the decisions list, after the user has read them */
+.decisions-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); }
+
+/* single download button, pushed to the right of the document tabs */
+.doctabs .dl-right { margin-left: auto; }
+
+/* simplified manual-review row: statement first, metadata as small tags beneath it */
+.statement .stmt-text { line-height: 1.45; color: var(--text); }
+.statement .stmt-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; align-items: center; }
 
 /* tables */
 /* The wide review table scrolls horizontally WITHIN its own box, so it can never push the page
