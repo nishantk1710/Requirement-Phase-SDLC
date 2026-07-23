@@ -38,6 +38,7 @@ from .srs_template import (
     features_in,
     to_shall_voice,
 )
+from .models import domain_entities, software_interfaces, user_classes
 from .tech_stack import tech_stack_markdown
 
 # Friendly names for the source documents referenced in §1.5 (keyed by ingest doc_id / stem).
@@ -242,6 +243,34 @@ def _references(reqs: list[Requirement]) -> list[str]:
     return lines
 
 
+def _cell(text: str) -> str:
+    """Collapse whitespace and escape the column separator so cell text can't break the table."""
+    return " ".join(str(text).split()).replace("|", "\\|")
+
+
+def _two_col_table(headers: list[str], rows: list[tuple[str, str]]) -> list[str]:
+    """A GitHub-flavoured markdown table the docx export renders as a real Word table."""
+    lines = ["| " + " | ".join(headers) + " |",
+             "|" + "|".join(["---"] * len(headers)) + "|"]
+    lines += ["| " + " | ".join(_cell(c) for c in row) + " |" for row in rows]
+    return lines
+
+
+def _user_classes_section(reqs: list[Requirement]) -> list[str]:
+    """§2.3 — a short intro then a GUARANTEED `User Class | Description` table derived from the
+    actors in the requirements (never LLM-dependent; the Design parser reads roles from this table)."""
+    headers = TABLE_SPECS["User Classes and Characteristics"]
+    return ["The system serves the following user classes:", ""] + _two_col_table(headers, user_classes(reqs))
+
+
+def _software_interfaces_section(reqs: list[Requirement]) -> list[str]:
+    """§3.3 — a short intro then a GUARANTEED `Name | Description` table of external interfaces
+    (never LLM-dependent; the Design parser reads external interfaces from this table)."""
+    headers = TABLE_SPECS["Software Interfaces"]
+    return (["The platform integrates with the following external software interfaces:", ""]
+            + _two_col_table(headers, software_interfaces(reqs)))
+
+
 def _appendix_b_placeholder(reqs: list[Requirement]) -> str:
     """Appendix B — a short DEFERRAL paragraph, NO diagrams (matches the reference SRS, which ships
     no seed models). Names the analysis models Design will produce, derived-in-name from this SRS's
@@ -249,8 +278,16 @@ def _appendix_b_placeholder(reqs: list[Requirement]) -> str:
     functional = [r for r in reqs if r.rtype == RType.functional]
     feats = features_in(functional)
     feat_list = (", ".join(feats[:8]) + ("…" if len(feats) > 8 else "")) if feats else "the Section 4 capabilities"
+    # Name the principal entities so the Design parser can extract them (it reads "principal
+    # entities (…)"). Derived deterministically from the requirements — never LLM-dependent.
+    entities = domain_entities(reqs)
+    entity_line = (
+        f"The principal entities ({', '.join(entities)}) identified from the approved requirements "
+        "will be elaborated in the Design-phase models.\n\n"
+    ) if entities else ""
     return (
-        "Detailed analysis models are produced in the **Design phase** and attached here when "
+        entity_line
+        + "Detailed analysis models are produced in the **Design phase** and attached here when "
         "available. Derived-in-name from the actors and the Section 4 features defined in this "
         "SRS, the Design phase will produce:\n\n"
         "- a **context data-flow diagram** — the system boundary and the data exchanged with its "
@@ -309,6 +346,10 @@ def generate_srs(
             body = [DOCUMENT_CONVENTIONS]
         elif num == "1.5":  # References — auto-built from the approved requirements' sources
             body = _references(approved)
+        elif num == "2.3":  # User Classes — guaranteed table (parser reads roles here), not LLM prose
+            body = _user_classes_section(approved)
+        elif num == "3.3":  # Software Interfaces — guaranteed table (parser reads interfaces here)
+            body = _software_interfaces_section(approved)
         elif title == "Appendix A: Glossary":  # auto-expanded acronyms found in the corpus
             body = glossary_markdown(approved)
         elif mode == "requirements":

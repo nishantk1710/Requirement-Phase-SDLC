@@ -367,3 +367,23 @@ def test_narrative_skipped_when_disabled(reqs):
     prov = MockProvider(responses=["unused"])
     assert draft_narrative(prov, "ELAMS", reqs, run_llm=False) == {}
     assert prov.calls == 0
+
+
+# --- strict parser-conformance (Design team's srs_parser) --------------------
+def test_srs_parser_conformance_tables_and_entities(reqs):
+    """The Design team parses the SRS with a strict deterministic parser: §2.3 and §3.3 MUST be
+    tables (with the exact header the parser keys off), Appendix B MUST name the principal entities,
+    and requirements MUST carry REQ-/NFR-/BR- tags. These are now guaranteed from data every run,
+    independent of the LLM narrative — so we assert them with NO narrative supplied."""
+    md = generate_srs(reqs, project_name="ELAMS")  # no narrative -> deterministic fallback path
+
+    uc = _between(md, "### 2.3 User Classes and Characteristics", "### 2.4")
+    assert "| User Class | Description |" in uc and TBD not in uc      # real table, never prose/TBD
+
+    si = _between(md, "### 3.3 Software Interfaces", "### 3.4")
+    assert "| Name | Description |" in si and TBD not in si            # first col "Name" -> parser skips header
+
+    appb = _between(md, "## Appendix B", "## Appendix C")
+    assert "principal entities (" in appb                              # parser extracts entities from this
+
+    assert "REQ-1:" in md and "NFR-1:" in md and "BR-1:" in md          # tagged for the parser

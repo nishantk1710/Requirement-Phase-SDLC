@@ -111,8 +111,10 @@ FEATURE_SUBSECTIONS: list[str] = [
 # Tables in the template and their column headers (the delivery format to reproduce).
 TABLE_SPECS: dict[str, list[str]] = {
     "Revision History": ["Name", "Date", "Reason For Changes", "Version"],
-    "User Classes and Characteristics": ["User Class", "Characteristics"],
-    "Software Interfaces": ["Interface", "Description"],
+    # Headers MUST match the reference SRS + the Design team's parser: it skips a header row whose
+    # first cell is "user class"/"name", so §2.3 col-1 = "User Class" and §3.3 col-1 = "Name".
+    "User Classes and Characteristics": ["User Class", "Description"],
+    "Software Interfaces": ["Name", "Description"],
     "Appendix A: Glossary": ["Term", "Definition"],
     "Appendix C: To Be Determined List": ["ID", "Description"],
     # §3.1 design-system token tables (from the updated reference SRS)

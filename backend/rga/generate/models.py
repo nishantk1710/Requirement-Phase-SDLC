@@ -57,6 +57,88 @@ def _actors(requirements: list[Requirement]) -> list[str]:
     return found or ["User"]
 
 
+# --- deterministic data for the parser-critical SRS structures ----------------
+# §2.3 User Classes, §3.3 Software Interfaces, and the Appendix-B entity line are consumed by the
+# Design team's parser as TABLES / a tagged line. They must be present EVERY run regardless of the
+# LLM narrative, so we derive them deterministically from the approved requirements here (domain-
+# agnostic keyword lexicons; first match wins; ordering is stable -> byte-identical output).
+
+# One short, generic characterisation per recognised role (keyed by the _ROLE_LEXICON display name).
+_ROLE_DESCRIPTIONS: dict[str, str] = {
+    "Customer": "Registered or guest end user who browses the catalogue, manages a cart, and places and tracks orders.",
+    "Administrator": "Privileged user who configures the platform and manages users, roles, content, and settings.",
+    "Manager": "Oversees a functional area and approves or supervises the work within it.",
+    "Operations Staff": "Handles day-to-day fulfilment, support, and operational tasks.",
+    "Finance": "Manages billing, payment reconciliation, and financial reporting.",
+    "Merchandiser": "Maintains the product catalogue, pricing, and promotions.",
+    "Doctor": "Clinical user who delivers care and maintains patient records.",
+    "Patient": "Receives care and manages their own health information and appointments.",
+    "Employee": "Internal staff member who uses the system to carry out their role.",
+    "User": "General authenticated user of the system.",
+}
+
+# External software interfaces commonly implied by the requirements (name, keywords, description).
+_INTERFACE_LEXICON: list[tuple[str, tuple[str, ...], str]] = [
+    ("Payment Provider",
+     ("payment", "card", "gateway", "checkout payment", "refund", "billing"),
+     "External payment provider integrated through a payment module; card data is handled by the provider."),
+    ("Email / SMS Notifications",
+     ("email", "sms", "notification", "notify", "otp", "reminder"),
+     "Email/SMS gateway for transactional order and account notifications."),
+    ("Search Service",
+     ("search", "autocomplete", "full-text", "faceted"),
+     "Search and indexing service backing catalogue search, autocomplete, and faceted filtering."),
+    ("Maps / Geolocation",
+     ("geolocation", "map service", "address lookup", "serviceab"),
+     "Geolocation/serviceability lookup for delivery addresses and PIN-code checks."),
+]
+
+# Candidate domain entities (entity name, keywords) — actors are added first, then these.
+_ENTITY_LEXICON: list[tuple[str, tuple[str, ...]]] = [
+    ("Product", ("product", "item", "sku", "catalogue", "catalog", "variant")),
+    ("Category", ("category", "categories")),
+    ("Brand", ("brand",)),
+    ("Cart", ("cart", "basket")),
+    ("Order", ("order",)),
+    ("Payment", ("payment", "refund", "invoice")),
+    ("Promotion", ("promo", "coupon", "discount", "voucher", "offer")),
+    ("Notification", ("notification", "notify", "alert")),
+    ("Address", ("address", "pin code", "pincode")),
+    ("Review", ("review", "rating")),
+    ("Inventory", ("inventory", "stock", "reservation")),
+    ("Report", ("report", "analytic", "dashboard")),
+]
+
+
+def user_classes(requirements: list[Requirement]) -> list[tuple[str, str]]:
+    """§2.3 rows: (User Class, Description) derived from the actors in the requirements. Never empty
+    (falls back to a single generic 'User')."""
+    approved = approved_sorted(requirements)
+    return [(role, _ROLE_DESCRIPTIONS.get(role, "User of the system.")) for role in _actors(approved)]
+
+
+def software_interfaces(requirements: list[Requirement]) -> list[tuple[str, str]]:
+    """§3.3 rows: (Name, Description) for the external interfaces implied by the requirements. If none
+    are recognised, a single honest 'None identified' row keeps the table well-formed."""
+    approved = approved_sorted(requirements)
+    corpus = " ".join(r.statement.lower() for r in approved)
+    rows = [(name, desc) for name, keys, desc in _INTERFACE_LEXICON if any(k in corpus for k in keys)]
+    return rows or [("None identified",
+                     "No external software interfaces were identified in the approved requirements for this release.")]
+
+
+def domain_entities(requirements: list[Requirement]) -> list[str]:
+    """Ordered, de-duplicated principal entities (actors first, then keyword-matched domain nouns) for
+    the Appendix-B 'principal entities (…)' line the parser reads. Never empty."""
+    approved = approved_sorted(requirements)
+    corpus = " ".join(r.statement.lower() for r in approved)
+    ents: list[str] = list(_actors(approved))
+    for name, keys in _ENTITY_LEXICON:
+        if name not in ents and any(k in corpus for k in keys):
+            ents.append(name)
+    return ents
+
+
 def use_case_model(requirements: list[Requirement]) -> str:
     """A Mermaid flowchart standing in for a use-case diagram: actors → use cases
     (one per feature). Deterministic and bounded."""
