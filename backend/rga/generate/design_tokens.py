@@ -15,11 +15,36 @@ standards. Everything is deterministic given the personality result, so output i
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from pydantic import BaseModel, Field
 
 from ..llm.base import LLMProvider
 from ..models import Requirement
 from .color_util import contrast_ratio
+
+# --- Brand profiles ---------------------------------------------------------------------------------
+# When an organisation brand is active (e.g. Zensar), §3.1 ADOPTS that brand's palette/personality
+# instead of deriving one from the requirements. Profiles are JSON beside this module
+# (`<name>_brand.json`); see zensar_brand.json. Passing brand=None keeps the legacy derived palette.
+_BRANDS_DIR = Path(__file__).parent
+
+
+def load_brand(name_or_path: str | None = "zensar") -> dict | None:
+    """Resolve a brand profile: a name ('zensar' -> zensar_brand.json beside this file) or a path to
+    a JSON file. Returns None if not found / not requested / unreadable — so a missing or malformed
+    brand file degrades to the legacy derived palette rather than breaking generation."""
+    if not name_or_path:
+        return None
+    try:
+        p = Path(name_or_path)
+        if p.suffix.lower() == ".json" and p.is_file():
+            return json.loads(p.read_text(encoding="utf-8"))
+        cand = _BRANDS_DIR / f"{name_or_path}_brand.json"
+        return json.loads(cand.read_text(encoding="utf-8")) if cand.is_file() else None
+    except (json.JSONDecodeError, OSError, ValueError):
+        return None
 
 # --- Open Color ramp (MIT, https://yeun.github.io/open-color/) — steps 0 (lightest) … 9 (darkest) --
 OPEN_COLOR: dict[str, list[str]] = {
@@ -116,9 +141,17 @@ def _fit(hue: str, start: int, min_ratio: float, backgrounds: list[str]) -> str:
 
 
 def generate_colour_tokens(requirements: list[Requirement], *, provider: LLMProvider | None = None,
-                           project_name: str = "the product", run_llm: bool = True) -> tuple[Personality, list[dict]]:
-    """Return (personality, token_rows) where each row is {token, hex, usage}. All hex values come
-    from the OPEN COLOR ramp and every text/border pair is AA-verified in code (Steps 3+4)."""
+                           project_name: str = "the product", run_llm: bool = True,
+                           brand: dict | None = None) -> tuple[Personality, list[dict]]:
+    """Return (personality, token_rows) where each row is (token, hex, usage). When a `brand` profile
+    is given, the palette is ADOPTED verbatim from it (the brand IS the design system). Otherwise all
+    hex values come from the OPEN COLOR ramp and every text/border pair is AA-verified (Steps 3+4)."""
+    if brand:
+        p = Personality(personality_words=list(brand.get("personality_words") or []),
+                        rationale=brand.get("rationale", ""))
+        rows = [(c["token"], str(c["hex"]).lstrip("#").lower(), c["usage"])
+                for c in brand.get("colour_tokens", [])]
+        return p, rows
     p = _derive_personality(provider, requirements, project_name, run_llm)
     prim, sec = p.primary_hue_family, p.secondary_hue_family
     ink = _fit("gray", 9, 4.5, [_SURFACE, _CANVAS])
@@ -173,26 +206,75 @@ def _table(headers: list[str], rows: list[tuple]) -> str:
     return "\n".join(out)
 
 
-def generate_design_tokens(requirements: list[Requirement], *, provider: LLMProvider | None = None,
-                           project_name: str = "the product", run_llm: bool = True) -> dict[str, str]:
-    """Build the §3.1.1–3.1.5 content (Parts B & C). Returns {section_number: markdown}."""
-    p, colour_rows = generate_colour_tokens(requirements, provider=provider,
-                                            project_name=project_name, run_llm=run_llm)
-    words = ", ".join(p.personality_words) if p.personality_words else "clear, modern, trustworthy"
-    theme = (
-        f"{_PROVISIONAL}\n\n"
-        f"The product's visual personality is **{words}**. {p.rationale} The design system is the single "
-        f"source of truth for the interface: every colour, type step and spacing value below is a NAMED "
-        f"token (never a hard-coded literal), so the look is consistent and re-themeable. The brand hue "
-        f"is used as an accent (~60/30/10 neutral/secondary/brand), not a flood, and status is always "
-        f"conveyed by an icon or label as well as colour."
+def _brand_marker(brand: dict) -> str:
+    return (f"_Proposed design system — adopted from the {brand.get('name', 'organisation')} corporate brand "
+            f"guidelines; Design/UX to confirm application details before build._")
+
+
+def _brand_accents_md(brand: dict) -> str:
+    """A bulleted (NOT tabular) accent-palette reference so designers have the brand's supporting
+    swatches + tint rule. Deliberately a list, not a table, so it never competes with the parser's
+    §3.1.2 colour-token table."""
+    acc = brand.get("accent_palette", [])
+    if not acc:
+        return ""
+    tint_str = "/".join(f"{t}%" for t in (brand.get("accent_tints") or [80, 60, 40]))
+    swatches = " · ".join(f"{c['name']} `#{str(c['hex']).upper()}`" for c in acc)
+    return (f"**Brand accent palette** — secondary supporting colours; apply at {tint_str} tints and "
+            f"never as the dominant colour:\n\n{swatches}")
+
+
+def _brand_theme(brand: dict, words: str) -> str:
+    """§3.1.1 prose for an adopted organisation brand (Zensar): names the primaries, the accent-as-
+    secondary rule (with tints), and the geometric element motifs — straight from the brand guide."""
+    name = brand.get("name", "the organisation")
+    prim = [c for c in brand.get("primary_palette", []) if str(c.get("hex", "")).upper() not in ("FFFFFF", "000000")]
+    prim_str = ", ".join(f"{c['name']} (#{str(c['hex']).upper()})" for c in prim)
+    acc_str = ", ".join(c["name"].lower() for c in brand.get("accent_palette", []))
+    tint_str = "/".join(f"{t}%" for t in (brand.get("accent_tints") or [80, 60, 40]))
+    el_str = ", ".join(brand.get("elements", []))
+    return (
+        f"The interface adopts the **{name}** brand system. The product's visual personality is **{words}**. "
+        f"{brand.get('rationale', '')} Foundational colours are the {name} primaries — {prim_str}, with black "
+        f"and white completing the core. Per the brand guidance, the primaries are the foundation while the "
+        f"accent family ({acc_str}) is used ONLY as **secondary supporting** colour at {tint_str} tints — "
+        f"keeping balance and avoiding overpowering the canvas with any one colour. Every colour, type step and "
+        f"spacing value below is a NAMED token (never a hard-coded literal), so the look is consistent and "
+        f"re-themeable. The brand's geometric elements — {el_str} — provide the visual motif for accents and "
+        f"section dividers. Status is always conveyed by an icon or label as well as colour."
     )
-    colour = _PROVISIONAL + "\n\n" + _table(["Token", "Hex", "Usage"],
-                                            [(t, f"`#{h}`", u) for t, h, u in colour_rows])
-    typography = _PROVISIONAL + "\n\n" + _table(["Token", "Size / Line-height", "Weight", "Usage"], _TYPE_ROWS)
-    spacing = _PROVISIONAL + "\n\n" + _table(["Token", "Value", "Usage"], _SPACE_ROWS)
+
+
+def generate_design_tokens(requirements: list[Requirement], *, provider: LLMProvider | None = None,
+                           project_name: str = "the product", run_llm: bool = True,
+                           brand: dict | None = None) -> dict[str, str]:
+    """Build the §3.1.1–3.1.5 content (Parts B & C). Returns {section_number: markdown}. When a
+    `brand` profile is given (e.g. Zensar), the palette + personality are ADOPTED from it."""
+    p, colour_rows = generate_colour_tokens(requirements, provider=provider,
+                                            project_name=project_name, run_llm=run_llm, brand=brand)
+    words = ", ".join(p.personality_words) if p.personality_words else "clear, modern, trustworthy"
+    marker = _brand_marker(brand) if brand else _PROVISIONAL
+    if brand:
+        theme = f"{marker}\n\n" + _brand_theme(brand, words)
+    else:
+        theme = (
+            f"{marker}\n\n"
+            f"The product's visual personality is **{words}**. {p.rationale} The design system is the single "
+            f"source of truth for the interface: every colour, type step and spacing value below is a NAMED "
+            f"token (never a hard-coded literal), so the look is consistent and re-themeable. The brand hue "
+            f"is used as an accent (~60/30/10 neutral/secondary/brand), not a flood, and status is always "
+            f"conveyed by an icon or label as well as colour."
+        )
+    colour = marker + "\n\n" + _table(["Token", "Hex", "Usage"],
+                                      [(t, f"`#{h}`", u) for t, h, u in colour_rows])
+    if brand:  # surface the brand's full accent swatch set (as a list, not a competing table)
+        accents_md = _brand_accents_md(brand)
+        if accents_md:
+            colour += "\n\n" + accents_md
+    typography = marker + "\n\n" + _table(["Token", "Size / Line-height", "Weight", "Usage"], _TYPE_ROWS)
+    spacing = marker + "\n\n" + _table(["Token", "Value", "Usage"], _SPACE_ROWS)
     layout = (
-        f"{_PROVISIONAL}\n\n"
+        f"{marker}\n\n"
         "- **Accessibility:** all text meets **WCAG 2.1 AA** contrast (≥ 4.5:1 body, ≥ 3:1 large text / "
         "UI / borders); the token palette above is generated to satisfy this.\n"
         "- **Status is never colour alone:** success/warning/error are always paired with an icon and a "

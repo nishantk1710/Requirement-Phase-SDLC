@@ -11,6 +11,7 @@ Wave-2. The pack says so in its manifest.
 from __future__ import annotations
 
 from ..llm.base import LLMProvider
+from ..logging_setup import get_logger
 from ..models import Requirement
 from ..review.gate import approved_only, counts, ready_for_generation
 from .common import approved_sorted
@@ -18,6 +19,9 @@ from .open_questions import compile_open_questions, reconcile_open_questions
 from .rtm import build_rtm, rtm_markdown, traceability_check
 from .srs import generate_srs
 from .srs_template import assign_srs_ids
+from .srs_validator import FormatInvalid, validate_markdown
+
+log = get_logger("rga.generate")
 
 
 class GateNotOpen(RuntimeError):
@@ -39,11 +43,17 @@ def generate_handoff(
     run_narrative: bool = True,
     tech_stack: dict | None = None,
     tech_stack_selection: dict | None = None,   # aspect key -> chosen candidate name
+    strict_format: bool = False,                 # True -> raise FormatInvalid if the SRS fails the schema
+    brand: str | dict | None = "zensar",         # org brand for §3.1 design tokens (None -> derived palette)
 ) -> dict:
     """Compose the handoff pack. Raises `GateNotOpen` if the gate is closed.
 
     If a `provider` is given and `run_narrative` is True, the prose sections are LLM-drafted;
     otherwise they render as `[TBD - Design/BA input]`. Everything else is deterministic.
+
+    The assembled SRS is validated against the Design-parser reference schema
+    (`srs_format_schema.json`): the result is recorded in the manifest as `format_validation`, and
+    a failure is logged loudly. Pass `strict_format=True` to REFUSE handoff on a format violation.
     """
     ok, reason = ready_for_generation(requirements)
     if not ok:
@@ -59,11 +69,13 @@ def generate_handoff(
         narrative = draft_narrative(provider, project_name, approved)
 
     # §3.1.1–3.1.5 design tokens (Parts B/C) — always populated (deterministic without a provider),
-    # clearly marked provisional. LLM only refines the brand personality when narrative is on.
-    from .design_tokens import generate_design_tokens
+    # clearly marked provisional. When an org brand is active (default: Zensar), §3.1 ADOPTS that
+    # brand's palette/personality; otherwise the palette is derived from the requirements.
+    from .design_tokens import generate_design_tokens, load_brand
 
+    brand_profile = load_brand(brand) if isinstance(brand, str) else brand
     design = generate_design_tokens(approved, provider=provider, project_name=project_name,
-                                    run_llm=(provider is not None and run_narrative))
+                                    run_llm=(provider is not None and run_narrative), brand=brand_profile)
 
     oq = compile_open_questions(reconcile_open_questions(open_questions or [], approved))   # Part H
     srs_md = generate_srs(
@@ -76,6 +88,16 @@ def generate_handoff(
         tech_stack_selection=tech_stack_selection,
         design_tokens=design,
     )
+    # Format-conformance gate: the assembled SRS MUST match the Design-parser reference schema.
+    # Deterministic check (no LLM). Recorded in the manifest; loud on failure; hard-fails if strict.
+    fmt = validate_markdown(srs_md)
+    if fmt["ok"]:
+        log.info("SRS format validated OK (%d/%d checks) for '%s'", fmt["checks_passed"], fmt["checks_total"], project_name)
+    else:
+        log.warning("SRS FORMAT CHECK FAILED for '%s' — %s", project_name, fmt["summary"])
+        if strict_format:
+            raise FormatInvalid(fmt["summary"])
+
     rtm_rows = build_rtm(approved, id_map)
     trace = traceability_check(approved)
     if not trace["complete"]:
@@ -103,6 +125,8 @@ def generate_handoff(
             "selections": len(tech_stack_selection or {}),
         },
         "traceability_complete": trace["complete"],
+        "design_brand": (brand_profile or {}).get("name"),
+        "format_validation": fmt,
         "scope_note": (
             "Wave-1 handoff: the cleaned SRS + cleaned RTM. Requirements carry full source "
             "traceability (in the RTM) and human-reviewed acceptance, with consolidation, conflict "

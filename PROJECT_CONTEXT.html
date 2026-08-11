@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>RGA — Project Context</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    color: #1f2430; font-size: 10.8pt; line-height: 1.55;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  h1, h2, h3 { color: #14162b; line-height: 1.2; }
+  h2 { font-size: 16.5pt; margin: 0 0 4px; padding-bottom: 6px; border-bottom: 2px solid #5b5bd6; }
+  h3 { font-size: 12.5pt; margin: 16px 0 4px; color: #2a2d52; }
+  p { margin: 6px 0; }
+  a { color: #4b4bc4; text-decoration: none; }
+  .muted { color: #5b6470; }
+  .small { font-size: 9.4pt; }
+  strong, b { color: #14162b; }
+
+  /* ---- cover ---- */
+  .cover { break-after: page; padding-top: 42mm; text-align: center; }
+  .cover .kicker { letter-spacing: .28em; font-size: 10pt; color: #5b5bd6; font-weight: 700; text-transform: uppercase; }
+  .cover h1 { font-size: 60pt; margin: 10mm 0 2mm; letter-spacing: .02em; }
+  .cover .sub { font-size: 17pt; color: #2a2d52; font-weight: 600; margin: 0; }
+  .cover .tag { font-size: 12pt; color: #5b6470; max-width: 120mm; margin: 8mm auto 0; line-height: 1.5; }
+  .cover .rule { width: 40mm; height: 3px; background: #5b5bd6; margin: 12mm auto; border-radius: 2px; }
+  .cover .meta { font-size: 10.5pt; color: #5b6470; margin-top: 4mm; }
+  .cover .meta b { color: #14162b; }
+
+  /* ---- section wrapper ---- */
+  section { break-inside: avoid-page; margin: 0 0 16px; }
+  .lead { font-size: 11.6pt; color: #2a2d52; }
+
+  /* ---- callouts ---- */
+  .callout { background: #f4f5fb; border-left: 4px solid #5b5bd6; border-radius: 4px; padding: 10px 14px; margin: 10px 0; break-inside: avoid; }
+  .callout.good { border-left-color: #2f9e6f; background: #eef8f2; }
+
+  /* ---- flow diagram (CSS) ---- */
+  .flow { display: flex; align-items: stretch; gap: 0; margin: 14px 0; break-inside: avoid; }
+  .flow .step { flex: 1; background: #fff; border: 1.5px solid #d7d9ec; border-radius: 8px; padding: 10px 8px; text-align: center; }
+  .flow .step .n { display: inline-block; width: 20px; height: 20px; line-height: 20px; border-radius: 50%; background: #5b5bd6; color: #fff; font-weight: 700; font-size: 9pt; }
+  .flow .step .t { font-weight: 700; font-size: 10pt; margin: 5px 0 2px; color: #14162b; }
+  .flow .step .d { font-size: 8.4pt; color: #5b6470; line-height: 1.35; }
+  .flow .arrow { align-self: center; color: #5b5bd6; font-size: 16pt; font-weight: 700; padding: 0 5px; }
+  .gate { text-align: center; margin: 6px 0 2px; }
+  .gate span { display: inline-block; background: #fff4e5; border: 1.5px solid #e6a23c; color: #9a5b00; border-radius: 999px; padding: 4px 14px; font-size: 8.8pt; font-weight: 600; }
+
+  /* ---- pipeline list ---- */
+  ol.stages { margin: 8px 0; padding-left: 22px; }
+  ol.stages li { margin: 4px 0; }
+  ol.stages li b { color: #2a2d52; }
+
+  /* ---- tables ---- */
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9.6pt; break-inside: avoid; }
+  th { background: #14162b; color: #fff; text-align: left; padding: 7px 9px; font-size: 8.8pt; text-transform: uppercase; letter-spacing: .03em; }
+  td { padding: 7px 9px; border-bottom: 1px solid #e4e6f2; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8f9fd; }
+  .chip { display: inline-block; background: #ecebfb; color: #4b4bc4; border-radius: 999px; padding: 1px 8px; font-size: 8.4pt; font-weight: 600; }
+
+  /* ---- architecture layers ---- */
+  .layers { margin: 12px 0; break-inside: avoid; }
+  .layer { border: 1.5px solid #d7d9ec; border-radius: 8px; padding: 8px 12px; margin: 6px 0; background: #fff; }
+  .layer .lh { font-weight: 700; color: #14162b; font-size: 10pt; }
+  .layer .ld { font-size: 8.8pt; color: #5b6470; }
+  .layer.accent { background: #f4f5fb; border-color: #b9bae8; }
+  .arrow-down { text-align: center; color: #5b5bd6; font-weight: 700; font-size: 13pt; line-height: 0.7; }
+
+  .two { display: flex; gap: 14px; break-inside: avoid; }
+  .two > div { flex: 1; }
+  .footer { margin-top: 18px; padding-top: 8px; border-top: 1px solid #e4e6f2; color: #8a92a4; font-size: 8.6pt; text-align: center; }
+  .toc { margin: 8px 0 0; }
+  .toc div { padding: 4px 0; border-bottom: 1px dotted #d7d9ec; font-size: 10.5pt; }
+  .toc .num { color: #5b5bd6; font-weight: 700; display: inline-block; width: 22px; }
+</style>
+</head>
+<body>
+
+<!-- ================= COVER ================= -->
+<div class="cover">
+  <div class="kicker">Project Context Document</div>
+  <h1>RGA</h1>
+  <p class="sub">Agentic Requirement Gathering &amp; Analysis</p>
+  <div class="rule"></div>
+  <p class="tag">An AI system that turns raw, messy project documents into a human‑reviewed,
+  evidence‑traceable requirements specification — the first phase of the software delivery lifecycle.</p>
+  <p class="meta"><b>Prepared by</b> RGA &nbsp;·&nbsp; <b>Version</b> 1.0 &nbsp;·&nbsp; <b>Phase</b> Requirements (SDLC)</p>
+</div>
+
+<!-- ================= CONTENTS ================= -->
+<section>
+  <h2>Contents</h2>
+  <div class="toc">
+    <div><span class="num">1</span> Executive summary</div>
+    <div><span class="num">2</span> The problem &amp; the solution</div>
+    <div><span class="num">3</span> How it works — the four phases</div>
+    <div><span class="num">4</span> Inside the pipeline — the AI agents</div>
+    <div><span class="num">5</span> System architecture</div>
+    <div><span class="num">6</span> What it consumes (LLM usage)</div>
+    <div><span class="num">7</span> Inputs &amp; outputs</div>
+    <div><span class="num">8</span> Principles &amp; guarantees</div>
+    <div><span class="num">9</span> Technology &amp; how it runs</div>
+    <div><span class="num">10</span> Where it fits &amp; what's next</div>
+  </div>
+</section>
+
+<!-- ================= 1 ================= -->
+<section>
+  <h2>1 · Executive summary</h2>
+  <p class="lead">RGA takes the pile of documents every project starts with — business requirements,
+  discovery‑call notes, email threads, backlogs — and turns them into one clean, agreed, professional
+  <b>requirements specification</b>, in a fraction of the usual time.</p>
+  <p>A pipeline of AI agents reads the documents the way an experienced analyst would: it extracts the
+  requirements, removes duplicates, resolves scope, flags contradictions, and checks for gaps. A person
+  then reviews and approves everything through a simple decision‑by‑decision interface. Finally, RGA
+  generates an industry‑standard <b>IEEE‑830 Software Requirements Specification (SRS)</b> and a
+  <b>Requirements Traceability Matrix (RTM)</b>, ready to hand to the design team.</p>
+  <div class="callout good">
+    <b>The outcome:</b> what typically takes a team several days of manual effort is produced in an
+    afternoon — with fewer errors, complete transparency, and a human in control of every decision.
+  </div>
+</section>
+
+<!-- ================= 2 ================= -->
+<section>
+  <h2>2 · The problem &amp; the solution</h2>
+  <div class="two">
+    <div>
+      <h3>The problem</h3>
+      <p>Requirements live scattered across many documents, written by different people in different
+      styles. Turning them into a single, unambiguous, non‑contradictory specification is slow and
+      manual — and it's easy to miss things, duplicate them, or lose the link back to where a
+      requirement actually came from. Mistakes here are expensive: they propagate into design, build,
+      and testing.</p>
+    </div>
+    <div>
+      <h3>The solution</h3>
+      <p>RGA automates the heavy lifting while keeping people in charge. AI agents do the reading and
+      first‑pass analysis in seconds; a human confirms the important calls; and the output is a
+      standards‑based document where <b>every requirement traces back to a byte‑accurate quote</b> from
+      the source. Nothing is invented, and nothing reaches the document until a human approves it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 3 ================= -->
+<section>
+  <h2>3 · How it works — the four phases</h2>
+  <div class="flow">
+    <div class="step"><span class="n">1</span><div class="t">Input</div><div class="d">Pick a document set or upload files; see exactly what's ingested</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><span class="n">2</span><div class="t">Run agents</div><div class="d">AI pipeline extracts &amp; analyses the requirements</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><span class="n">3</span><div class="t">Review</div><div class="d">A person approves, edits, or rejects — decision by decision</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><span class="n">4</span><div class="t">Generate</div><div class="d">SRS + RTM produced and rendered to Word</div></div>
+  </div>
+  <div class="gate"><span>⛔ Hard review gate — generation is locked until every requirement is triaged &amp; approved</span></div>
+  <p><b>1 · Input.</b> The user selects a prepared set of project documents (or uploads their own). The
+  system first shows the metadata of every file — name, format, size — so it's always clear what data
+  went in.</p>
+  <p><b>2 · Run.</b> A background pipeline of agents reads the documents and produces a clean, analysed
+  set of candidate requirements. Progress is shown live, step by step.</p>
+  <p><b>3 · Review.</b> The human control point. Instead of reading hundreds of items one by one, the
+  reviewer works through a short list of <b>decisions</b> — each with a recommendation and its reasoning —
+  and confirms the technology stack. Resolving one decision applies everywhere it's relevant.</p>
+  <p><b>4 · Generate.</b> Once the gate opens, RGA drafts the descriptive prose, assembles the SRS and
+  RTM, and renders professional Word documents ready for the design team.</p>
+</section>
+
+<!-- ================= 4 ================= -->
+<section>
+  <h2>4 · Inside the pipeline — the AI agents</h2>
+  <p>The "Run" phase is a sequence of specialised agents. Each does one job well; together they turn raw
+  text into a trustworthy requirement set.</p>
+  <ol class="stages">
+    <li><b>Extraction &amp; Critic</b> — read each piece of the documents and pull out candidate
+      requirements, each backed by an exact source quote; a critic rejects anything invented or ungrounded.</li>
+    <li><b>De‑duplication</b> — collapse the same requirement written in different words.</li>
+    <li><b>Consolidation</b> — merge everything into one canonical statement per requirement.</li>
+    <li><b>Scope reconciliation</b> — drop items the sources mark out of scope for this release.</li>
+    <li><b>Conflict detection</b> — surface requirements that contradict each other, for a human to resolve.</li>
+    <li><b>Verification</b> — an independent second opinion on the riskiest requirements.</li>
+    <li><b>Completeness check</b> — flag commonly‑expected requirements the documents didn't mention.</li>
+    <li><b>Clarity &amp; priority</b> — score wording for ambiguity and assign High / Medium / Low.</li>
+    <li><b>Technology stack</b> — adopt a stated stack, or propose simple, popular options per area.</li>
+    <li><b>Auto‑approve routine</b> — clear, confident items are auto‑approved; the rest go to the human.</li>
+  </ol>
+  <div class="callout">Everything else — grounding checks, triage, traceability, glossary, and the Word
+  render — is <b>deterministic</b> (rule‑based, no AI), which keeps the output stable and repeatable.</div>
+</section>
+
+<!-- ================= 5 ================= -->
+<section>
+  <h2>5 · System architecture</h2>
+  <p>RGA is built as two applications that run independently and talk over a simple web API.</p>
+  <div class="layers">
+    <div class="layer"><span class="lh">Frontend — review web app</span> <span class="ld">· React + Vite. The four‑tab interface the user sees. Contains no business logic — it renders state and sends decisions back.</span></div>
+    <div class="arrow-down">↑ ↓ &nbsp;JSON over <code>/api</code></div>
+    <div class="layer accent"><span class="lh">Backend — API &amp; jobs</span> <span class="ld">· FastAPI. Exposes the endpoints and runs the long operations (run, generate) as background jobs the UI polls for progress.</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="layer"><span class="lh">Processing core</span> <span class="ld">· Ingest → Extract → Analyse → Generate. Shared by the API and the command line, so behaviour is identical everywhere.</span></div>
+    <div class="two" style="margin-top:6px">
+      <div class="layer"><span class="lh">LLM provider</span> <span class="ld">· Claude (Sonnet) via Azure AI Foundry, behind one interface, with a response cache and a test‑mode mock.</span></div>
+      <div class="layer"><span class="lh">Store</span> <span class="ld">· SQLite. Persists requirements, source evidence, and review decisions so work survives a reload.</span></div>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>Component</th><th>Technology</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>Frontend</td><td>React, Vite, TypeScript</td><td>The 4‑tab review UI</td></tr>
+      <tr><td>Backend API</td><td>FastAPI (Python)</td><td>Endpoints + background run/generate jobs</td></tr>
+      <tr><td>Agents &amp; orchestration</td><td>Python, LangGraph</td><td>Extract, analyse, verify, propose stack</td></tr>
+      <tr><td>LLM provider</td><td>Claude Sonnet · Azure AI Foundry</td><td>All AI calls, cached</td></tr>
+      <tr><td>Store</td><td>SQLite</td><td>Requirements, evidence, decisions</td></tr>
+      <tr><td>Generators</td><td>python‑docx + templates</td><td>IEEE‑830 SRS, RTM, Word renders</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 6 ================= -->
+<section>
+  <h2>6 · What it consumes (LLM usage)</h2>
+  <p>All AI runs on <b>Claude Sonnet</b> via Azure AI Foundry, at temperature 0 (deterministic). Cost is
+  driven almost entirely by the <b>extraction</b> step, which scales with the size of the input documents;
+  the analysis and generation steps add only a small, fixed number of calls.</p>
+  <table>
+    <thead><tr><th>Cost centre</th><th>How it scales</th><th>Approx. calls</th></tr></thead>
+    <tbody>
+      <tr><td>Extraction + Critic</td><td>Per document chunk × passes</td><td>~2 per chunk (the bulk)</td></tr>
+      <tr><td>Analysis agents</td><td>Fixed per run</td><td>~6 calls</td></tr>
+      <tr><td>Verification</td><td>High‑risk subset only</td><td>a handful</td></tr>
+      <tr><td>Generation</td><td>Fixed per generate</td><td>2 calls</td></tr>
+    </tbody>
+  </table>
+  <div class="callout"><b>Measured example.</b> A 6‑document set (≈100 evidence chunks) used about
+  <b>255 AI calls</b> for a complete Run + Generate, on the order of <b>300k–400k tokens</b> total.
+  <b>Because every response is cached, re‑running the same inputs is effectively free.</b></div>
+</section>
+
+<!-- ================= 7 ================= -->
+<section>
+  <h2>7 · Inputs &amp; outputs</h2>
+  <div class="two">
+    <div>
+      <h3>Inputs</h3>
+      <p>A set of project documents in everyday formats: <span class="chip">.docx</span>
+      <span class="chip">.pdf</span> <span class="chip">.txt</span> <span class="chip">.md</span>
+      <span class="chip">.csv</span> — for example a BRD, a discovery‑call transcript, an email thread,
+      notes, an intake form, and a product backlog.</p>
+    </div>
+    <div>
+      <h3>Outputs — the handoff pack</h3>
+      <p><b>SRS</b> — the IEEE‑830 requirements specification (Word + Markdown).<br/>
+      <b>RTM</b> — the traceability matrix linking every requirement to its source line.<br/>
+      <b>Manifest</b> — a record of what was produced.</p>
+    </div>
+  </div>
+  <p class="small muted">The design team consumes the SRS with a strict automated parser, so RGA
+  guarantees a fixed, standards‑compliant document structure on every run.</p>
+</section>
+
+<!-- ================= 8 ================= -->
+<section>
+  <h2>8 · Principles &amp; guarantees</h2>
+  <table>
+    <thead><tr><th>Principle</th><th>What it means</th></tr></thead>
+    <tbody>
+      <tr><td>Human‑in‑the‑loop</td><td>A hard gate means no un‑approved content ever reaches the documents.</td></tr>
+      <tr><td>Full traceability</td><td>Every requirement carries a byte‑accurate source quote; the RTM makes the trail explicit.</td></tr>
+      <tr><td>Nothing invented</td><td>The critic agent rejects any requirement not grounded in the source text.</td></tr>
+      <tr><td>Deterministic structure</td><td>The document's tables and sections are built from data, so the output is identical and parser‑safe every run.</td></tr>
+      <tr><td>Repeatable &amp; cheap</td><td>Temperature 0 plus response caching make re‑runs consistent and effectively free.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 9 ================= -->
+<section>
+  <h2>9 · Technology &amp; how it runs</h2>
+  <p>The system runs as two local services: the <b>backend</b> (Python / FastAPI, serving the API and the
+  agent pipeline) and the <b>frontend</b> (React / Vite review app). The backend uses Claude on Azure AI
+  Foundry for the AI steps and SQLite for storage; both are started with simple, separate commands and
+  reach each other over <code>http://127.0.0.1:8000</code>.</p>
+  <p class="small muted">Full setup, endpoints, logs, and the integration contract for a combined SDLC
+  frontend are documented in the repository's <b>README.md</b>, <b>ARCHITECTURE.md</b>, and
+  <b>INTEGRATION.md</b>.</p>
+</section>
+
+<!-- ================= 10 ================= -->
+<section>
+  <h2>10 · Where it fits &amp; what's next</h2>
+  <p>RGA is the <b>Requirements</b> phase of the wider software delivery lifecycle. Its handoff pack — a
+  clean, approved, fully traceable SRS + RTM — is the direct input to the <b>Design</b> phase, and the
+  documents are formatted specifically so the design team's tooling can consume them automatically.</p>
+  <p>As the individual SDLC phases are combined into one unified platform, RGA plugs in through its web
+  API: other phases call it to run the pipeline, read the requirements, and pull the finished
+  documents — making requirements the reliable, auditable foundation for everything built on top.</p>
+  <div class="footer">RGA — Agentic Requirement Gathering &amp; Analysis · Project Context Document · Version 1.0</div>
+</section>
+
+</body>
+</html>

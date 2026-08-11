@@ -1,0 +1,42 @@
+{
+  "name": "Zensar",
+  "tagline": "An RPG Company",
+  "personality_words": ["professional", "trustworthy", "modern", "confident", "human"],
+  "rationale": "This makes the product read as an official Zensar application rather than an ad-hoc palette.",
+  "elements": ["quarter-circle", "triangle", "square", "circle"],
+
+  "primary_palette": [
+    { "name": "Royal blue",  "pantone": "2728 C", "hex": "3956A5" },
+    { "name": "Navy blue",   "pantone": "2758 C", "hex": "10005D" },
+    { "name": "Scarlet red", "pantone": "485 C",  "hex": "FF4B41" },
+    { "name": "Crimson red", "pantone": "2350",   "hex": "B41E26" },
+    { "name": "White",       "pantone": "",       "hex": "FFFFFF" },
+    { "name": "Black",       "pantone": "",       "hex": "000000" }
+  ],
+
+  "accent_palette": [
+    { "name": "Grey-green", "pantone": "4178 C", "hex": "C0C0B3" },
+    { "name": "Sage",       "pantone": "4206 C", "hex": "9BB796" },
+    { "name": "Teal",       "pantone": "7472 C", "hex": "87C8C3" },
+    { "name": "Light blue", "pantone": "644 C",  "hex": "97AFD4" },
+    { "name": "Lavender",   "pantone": "2645 C", "hex": "B7A2E0" },
+    { "name": "Pink",       "pantone": "3519 C", "hex": "EAADB8" },
+    { "name": "Gold",       "pantone": "458 C",  "hex": "E4C573" }
+  ],
+  "accent_tints": [80, 60, 40],
+
+  "colour_tokens": [
+    { "token": "color-primary",      "hex": "3956A5", "usage": "Royal blue (Pantone 2728 C) — primary brand colour: key actions, links, active states (AA on white)." },
+    { "token": "color-primary-dark", "hex": "10005D", "usage": "Navy blue (Pantone 2758 C) — button fills, hover/pressed, headers; white text (AA)." },
+    { "token": "color-secondary",    "hex": "FF4B41", "usage": "Scarlet red (Pantone 485 C) — accent / secondary highlights and active states; use dark text on fills (AA)." },
+    { "token": "color-success",      "hex": "9BB796", "usage": "Sage green (Pantone 4206 C) — success badge fill; pair with dark text + icon." },
+    { "token": "color-warning",      "hex": "E4C573", "usage": "Gold (Pantone 458 C) — warning badge fill; pair with dark text + icon." },
+    { "token": "color-error",        "hex": "B41E26", "usage": "Crimson red (Pantone 2350) — errors / destructive actions; white text (AA)." },
+    { "token": "color-ink",          "hex": "000000", "usage": "Black — primary text / headings on light surfaces." },
+    { "token": "color-body",         "hex": "1F2430", "usage": "Near-black neutral — body text on light surfaces (AA)." },
+    { "token": "color-muted",        "hex": "5F6066", "usage": "Neutral grey — secondary / muted text, captions (AA-verified)." },
+    { "token": "color-surface",      "hex": "FFFFFF", "usage": "White — card / panel surface." },
+    { "token": "color-canvas",       "hex": "F7F7F5", "usage": "Warm off-white — page background." },
+    { "token": "color-border",       "hex": "8A8B80", "usage": "Grey-green (from Pantone 4178 C, AA-darkened) — dividers, card & input outlines (>= 3:1 vs canvas)." }
+  ]
+}

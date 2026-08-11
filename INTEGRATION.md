@@ -91,6 +91,13 @@ every run (User‑Classes table §2.3, Software‑Interfaces table §3.3, glossa
 tagged `REQ-/NFR-/BR-n` lines, Appendix‑B entities) **independent of the LLM**. Do not reformat
 the `.docx` in the combined UI — pass it through as‑is.
 
+**Format‑validation guarantee.** Every generation runs a deterministic **format validator** against
+that contract (schema: `backend/rga/generate/srs_format_schema.json`). The result is recorded in
+`manifest.json` under **`format_validation`** — `{ ok, checks_passed, checks_total, violations[] }`
+— and surfaced in the generate‑status. If `ok` is `false`, the SRS does **not** match what the
+parser expects; surface that to the user rather than handing off. You can re‑check any file at the
+CLI: `python -m rga validate-srs <SRS.docx>`.
+
 ---
 
 ## 5. API reference

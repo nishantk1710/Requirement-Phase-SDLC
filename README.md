@@ -290,7 +290,14 @@ python -m rga run --project P1 --resume --provider foundry                  # re
 python -m rga store --project P1 --provider foundry     # extract + persist (populate the review UI)
 python -m rga generate --project P1 --provider foundry  # build the handoff pack from approved reqs
 python -m rga eval --split test --provider foundry       # extract + score against the gold set
+python -m rga validate-srs handoff/P1/SRS.docx           # check an SRS against the Design-parser format schema
 ```
+
+The **format validator** (`validate-srs`) checks a generated SRS (`.docx` or `.md`) against the
+reference schema in `backend/rga/generate/srs_format_schema.json` — the contract the Design team's
+parser depends on (required sections, the §2.3/§3.3/Appendix‑A tables, `REQ-/NFR-/BR-n` tags, the
+Appendix‑B entities line). It exits non‑zero on any violation. Every `generate` also runs this check
+automatically and records the result in the pack's `manifest.json` under `format_validation`.
 
 `python -m rga run` uses a LangGraph StateGraph with `interrupt_before=["review"]` and a resumable
 SQLite checkpointer (`backend/data/checkpoints.sqlite`), so a killed run resumes at the review pause.

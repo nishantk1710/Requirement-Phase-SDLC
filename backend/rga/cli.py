@@ -320,6 +320,22 @@ def _add_common(sp):
     )
 
 
+def cmd_validate(args) -> None:
+    """Check a generated SRS against the Design-parser reference format schema (deterministic)."""
+    from .generate.srs_validator import load_schema, validate_srs_file
+
+    schema = load_schema(args.schema) if args.schema else None
+    rep = validate_srs_file(args.path, schema)
+    print(rep["summary"])
+    print(f"  source     : {rep['source']}")
+    print(f"  schema     : {rep['schema']}")
+    print(f"  extracted  : {rep['extracted']}")
+    for v in rep["violations"]:
+        print(f"  x [{v['rule']}] {v['detail']}")
+    if not rep["ok"]:
+        raise SystemExit(1)
+
+
 def main(argv=None) -> None:
     p = argparse.ArgumentParser(prog="rga", description="Agentic Requirement Gathering & Analysis (PoC)")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -368,6 +384,11 @@ def main(argv=None) -> None:
                    help="LLM used when the UI runs the pipeline / generates (default: config.yaml)")
     v.add_argument("--cache", default=".cache")
     v.set_defaults(fn=cmd_serve)
+
+    vv = sub.add_parser("validate-srs", help="check a generated SRS (.docx or .md) against the Design-parser format schema")
+    vv.add_argument("path", help="path to SRS.docx or SRS.md")
+    vv.add_argument("--schema", default=None, help="reference schema JSON (default: bundled srs_format_schema.json)")
+    vv.set_defaults(fn=cmd_validate)
 
     args = p.parse_args(argv)
     args.fn(args)

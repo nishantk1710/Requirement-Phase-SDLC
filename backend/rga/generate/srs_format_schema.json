@@ -1,0 +1,64 @@
+{
+  "name": "IEEE-830 SRS — RGA to Design-parser format contract",
+  "version": "1.0",
+  "description": "The reference format the generated SRS must always satisfy so the Design team's deterministic SRS parser can extract every Level-1 artifact. Edit this file to change what 'aligned' means; the validator (rga/generate/srs_validator.py) enforces it on every generation.",
+
+  "required_sections": [
+    { "num": "1",   "title_contains": "introduction" },
+    { "num": "1.1", "title_contains": "purpose" },
+    { "num": "1.2", "title_contains": "document conventions" },
+    { "num": "1.3", "title_contains": "intended audience" },
+    { "num": "1.4", "title_contains": "product scope" },
+    { "num": "1.5", "title_contains": "references" },
+    { "num": "2",   "title_contains": "overall description" },
+    { "num": "2.1", "title_contains": "product perspective" },
+    { "num": "2.2", "title_contains": "product functions" },
+    { "num": "2.3", "title_contains": "user class" },
+    { "num": "2.4", "title_contains": "operating environment" },
+    { "num": "2.5", "title_contains": "constraints" },
+    { "num": "2.6", "title_contains": "user documentation" },
+    { "num": "2.7", "title_contains": "assumptions" },
+    { "num": "3",   "title_contains": "external interface" },
+    { "num": "3.1", "title_contains": "user interfaces" },
+    { "num": "3.1.1", "title_contains": "visual theme" },
+    { "num": "3.1.2", "title_contains": "colour" },
+    { "num": "3.1.3", "title_contains": "typography" },
+    { "num": "3.1.4", "title_contains": "spacing" },
+    { "num": "3.1.5", "title_contains": "layout" },
+    { "num": "3.2", "title_contains": "hardware interface" },
+    { "num": "3.3", "title_contains": "software interface" },
+    { "num": "3.4", "title_contains": "communications interface" },
+    { "num": "4",   "title_contains": "system features" },
+    { "num": "5",   "title_contains": "nonfunctional" },
+    { "num": "5.1", "title_contains": "performance" },
+    { "num": "5.2", "title_contains": "safety" },
+    { "num": "5.3", "title_contains": "security" },
+    { "num": "5.4", "title_contains": "quality" },
+    { "num": "5.5", "title_contains": "business rules" },
+    { "num": "6",   "title_contains": "other requirements" },
+    { "num": "7",   "title_contains": "technology stack" },
+    { "title_contains": "appendix a" },
+    { "title_contains": "appendix b" },
+    { "title_contains": "appendix c" }
+  ],
+
+  "required_tables": [
+    { "id": "user_classes",       "in_section": "2.3", "header": ["User Class", "Description"], "header_match": "exact",      "min_data_rows": 1 },
+    { "id": "software_interfaces","in_section": "3.3", "header": ["Name", "Description"],       "header_match": "exact",      "min_data_rows": 1 },
+    { "id": "colour_tokens",      "in_section": "3.1.2", "header": ["Token"],                   "header_match": "first_cell", "min_data_rows": 1 },
+    { "id": "typography_tokens",  "in_section": "3.1.3", "header": ["Token"],                   "header_match": "first_cell", "min_data_rows": 1 },
+    { "id": "spacing_tokens",     "in_section": "3.1.4", "header": ["Token"],                   "header_match": "first_cell", "min_data_rows": 1 },
+    { "id": "glossary",           "in_section_title_contains": "appendix a", "header": ["Term", "Definition"], "header_match": "exact", "min_data_rows": 1 }
+  ],
+
+  "required_tagged_requirements": [
+    { "id": "functional",     "tag": "REQ", "min_count": 1 },
+    { "id": "non_functional", "tag": "NFR", "min_count": 0 },
+    { "id": "business_rules", "tag": "BR",  "min_count": 0 }
+  ],
+
+  "required_patterns": [
+    { "id": "principal_entities", "regex": "principal entities\\s*\\(", "in_section_title_contains": "appendix b", "min_count": 1,
+      "description": "Appendix B must name the principal entities in a 'principal entities (a, b, c)' line — the parser extracts entities from it." }
+  ]
+}

@@ -481,6 +481,13 @@ export function App() {
               ? <span className="ok">{genStatus.data.count} approved requirement(s) · full traceability</span>
               : <span className="gate-blocked">{genStatus.data.count} approved · traceability incomplete — a requirement is missing its source</span>
           )}
+          {genStatus.data?.state === "done" && (() => {
+            const fv = (genStatus.data.manifest as { format_validation?: { ok?: boolean; checks_passed?: number; checks_total?: number; summary?: string } } | undefined)?.format_validation;
+            if (!fv) return null;
+            return fv.ok
+              ? <span className="ok" title={fv.summary}>format validated ✓ ({fv.checks_passed}/{fv.checks_total})</span>
+              : <span className="gate-blocked" title={fv.summary}>format check failed — see manifest</span>;
+          })()}
         </div>
         {generate.isError && <p className="gate-blocked">{(generate.error as Error).message}</p>}
         {genStatus.data && genStatus.data.state !== "done" && (
