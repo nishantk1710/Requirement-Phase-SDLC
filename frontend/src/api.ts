@@ -146,6 +146,33 @@ export const getArtifact = async (pid: string, name: string): Promise<string> =>
   return text;
 };
 
+// --- local file browser + handoff ZIP --------------------------------------
+// The backend runs on the user's machine, so we browse the LOCAL filesystem and select files by
+// path (no browser upload — some orgs block that). The backend reads the chosen files off disk.
+export interface FsEntry { name: string; path: string; is_dir: boolean; size: string; is_image: boolean; }
+export const getFsRoots = (): Promise<{ roots: { name: string; path: string }[]; cwd: string }> =>
+  fetch("/api/fs/roots").then(unwrap<{ roots: { name: string; path: string }[]; cwd: string }>);
+export const getFsList = (path: string): Promise<{ path: string; parent: string | null; entries: FsEntry[] }> =>
+  fetch(`/api/fs/list?path=${encodeURIComponent(path)}`).then(unwrap<{ path: string; parent: string | null; entries: FsEntry[] }>);
+
+// Send the selected local paths; get a ZIP back and save it (a download, not an upload).
+export const downloadHandoffZip = async (pid: string, asset1: string[], asset2: string[]): Promise<void> => {
+  const res = await fetch(`/api/projects/${pid}/handoff-zip`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ asset1, asset2 }),
+  });
+  if (!res.ok) {
+    let detail = res.statusText;
+    try { detail = (JSON.parse(await res.text()) as { detail?: string }).detail ?? detail; } catch { /* not JSON */ }
+    throw new Error(detail);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `${pid}_handoff.zip`; a.click();
+  URL.revokeObjectURL(url);
+};
+
 // --- pipeline (input → run → progress) --------------------------------------
 export interface CorpusFile {
   doc_id: string;

@@ -306,6 +306,47 @@ header.topbar .brand { cursor: pointer; }
 /* single download button, pushed to the right of the document tabs */
 .doctabs .dl-right { margin-left: auto; }
 
+/* asset picker — pick your OWN files (file explorer) for asset1/asset2, then download the ZIP */
+.assetpicker { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--border); }
+.asset-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 14px 0; }
+.asset-col { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--panel); }
+.asset-col-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.asset-col-head b { font-size: 14px; }
+.asset-hint { margin: 4px 0 10px; }
+.asset-empty { margin: 10px 0 0; }
+.asset-files { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.asset-files li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--bg-soft); }
+.asset-fname { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.asset-x { flex: none; padding: 0 9px; line-height: 1.7; font-size: 15px; color: var(--danger);
+  border-color: var(--danger-tint); background: var(--danger-tint); }
+.asset-x:hover:not(:disabled) { background: #f7ddd9; }
+@media (max-width: 640px) { .asset-cols { grid-template-columns: 1fr; } }
+
+/* in-app file explorer — browse the local disk and select files by path (no upload) */
+.fx-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); display: grid; place-items: center;
+  z-index: 100; padding: 20px; }
+.fx-panel { width: min(760px, 96vw); max-height: 86vh; display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+.fx-head { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.fx-close { border: none; background: transparent; font-size: 20px; line-height: 1; color: var(--muted); padding: 0 6px; }
+.fx-roots { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+.fx-roots button { font-size: 12px; padding: 4px 10px; }
+.fx-path { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+.fx-cwd { font-family: var(--mono); font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-list { flex: 1; overflow-y: auto; padding: 8px; min-height: 200px; }
+.fx-row { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; cursor: pointer;
+  width: 100%; text-align: left; border: none; background: transparent; font: inherit; color: var(--text); margin: 1px 0; }
+.fx-row:hover { background: var(--bg-soft); }
+.fx-file.sel { background: var(--accent-tint); }
+.fx-ic { width: 20px; text-align: center; flex: none; }
+.fx-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.fx-size { flex: none; }
+.fx-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 16px; border-top: 1px solid var(--border); }
+.fx-foot-actions { display: flex; gap: 8px; }
+
 /* simplified manual-review row: statement first, metadata as small tags beneath it */
 .statement .stmt-text { line-height: 1.45; color: var(--text); }
 .statement .stmt-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; align-items: center; }

@@ -1,4 +1,4 @@
-# RGA — Agentic Requirement Gathering & Analysis
+![1787121366842](image/README/1787121366842.png)![1787121377548](image/README/1787121377548.png)![1787121381298](image/README/1787121381298.png) Recondensation and along the left disturbance meet home pulling last school grammar and wid bottle medicine problems screenare places forit came shit scratch to open target schools tracker URLet of human browser and shut session session cap to# RGA — Agentic Requirement Gathering & Analysis
 
 RGA is an agentic pipeline that turns raw, messy project inputs (BRDs, discovery-call transcripts,
 email threads, product backlogs, ops intake forms) into a **human-reviewed, evidence-traceable

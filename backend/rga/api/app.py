@@ -23,13 +23,15 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import io
 import json
+import zipfile
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -94,6 +96,11 @@ class ResolveBody(BaseModel):
     recommended: str = ""   # the verdict shown to the reviewer
     action: str = ""        # what was applied (keep-a / accept / reject / dismissed / …)
     actor: str = "reviewer"
+
+
+class HandoffZipBody(BaseModel):
+    asset1: list[str] = []   # local file paths (selected in the browser) -> asset1/ (design elements)
+    asset2: list[str] = []   # local file paths -> asset2/ (static images for web)
 
 
 def _needs_attention(r: Requirement) -> bool:
@@ -763,6 +770,94 @@ def create_app(
                 return p.read_text(encoding="utf-8")
             raise HTTPException(status_code=404, detail=f"no artifact '{name}'")
         return content
+
+    # ---- local file browser + ZIP handoff --------------------------------
+    # RGA runs on the user's own machine (bound to 127.0.0.1), so these endpoints let the UI browse
+    # the LOCAL filesystem and select files BY PATH — the backend reads them off disk directly. No
+    # browser upload happens (some orgs block uploads); only path strings cross the wire.
+    _IMG_EXT = {"jpg", "jpeg", "png", "gif", "svg", "webp", "bmp", "ico", "tiff", "avif"}
+
+    @app.get("/api/fs/roots")
+    async def fs_roots() -> dict:
+        """Starting points for the file browser: home + common folders, and drives on Windows."""
+        import os
+        import string
+
+        home = Path.home()
+        roots = [{"name": "Home", "path": str(home)}]
+        for special in ("Desktop", "Documents", "Downloads", "Pictures"):
+            if (home / special).is_dir():
+                roots.append({"name": special, "path": str(home / special)})
+        if os.name == "nt":
+            for d in string.ascii_uppercase:
+                drive = Path(f"{d}:\\")
+                if drive.exists():
+                    roots.append({"name": f"{d}:\\", "path": str(drive)})
+        else:
+            roots.append({"name": "/", "path": "/"})
+        return {"roots": roots, "cwd": str(Path.cwd())}
+
+    @app.get("/api/fs/list")
+    async def fs_list(path: str = Query(...)) -> dict:
+        """List a directory on the local machine (folders first, then files) for the file browser."""
+        try:
+            p = Path(path).expanduser().resolve()
+        except (OSError, ValueError, RuntimeError):
+            raise HTTPException(status_code=400, detail="invalid path")
+        if not p.is_dir():
+            raise HTTPException(status_code=400, detail=f"not a directory: {path}")
+        entries = []
+        try:
+            children = sorted(p.iterdir(), key=lambda c: (not c.is_dir(), c.name.lower()))
+        except (OSError, PermissionError) as exc:
+            raise HTTPException(status_code=403, detail=f"cannot read directory: {exc}")
+        for child in children[:2000]:                          # cap pathological dirs
+            try:
+                is_dir = child.is_dir()
+                size = None if is_dir else child.stat().st_size
+            except (OSError, PermissionError):
+                continue                                        # skip entries we can't stat
+            ext = child.suffix.lower().lstrip(".")
+            entries.append({
+                "name": child.name, "path": str(child), "is_dir": is_dir,
+                "size": _human_size(size) if size is not None else "",
+                "is_image": ext in _IMG_EXT,
+            })
+        parent = str(p.parent) if p.parent != p else None
+        return {"path": str(p), "parent": parent, "entries": entries}
+
+    @app.post("/api/projects/{pid}/handoff-zip")
+    async def handoff_zip(pid: str, body: HandoffZipBody):
+        """Build the final handoff ZIP: the SRS/RTM pack + the files the user selected (by local path)
+        under asset1/ and asset2/. Files are read from the local disk — nothing is uploaded. Refuses
+        until the SRS has been generated for this project."""
+        outdir = Path("handoff") / safe_dir_component(pid)
+        if not (outdir / "SRS.docx").exists() and not (outdir / "SRS.md").exists():
+            raise HTTPException(status_code=400,
+                                detail="generate the SRS first — no handoff pack found for this project")
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for name in ("SRS.docx", "SRS.md", "RTM.docx", "RTM.md", "manifest.json"):
+                f = outdir / name
+                if f.exists():
+                    z.write(f, arcname=name)
+            for folder, paths in (("asset1", body.asset1), ("asset2", body.asset2)):
+                used: set[str] = set()
+                for raw in paths:
+                    src = Path(raw)
+                    if not src.is_file():
+                        continue                                # skip anything that isn't a real file
+                    arc = src.name
+                    n = 1
+                    while arc in used:                          # keep names unique within the folder
+                        arc = f"{src.stem}_{n}{src.suffix}"
+                        n += 1
+                    used.add(arc)
+                    z.write(src, arcname=f"{folder}/{arc}")
+        buf.seek(0)
+        fname = f"{safe_dir_component(pid)}_handoff.zip"
+        return Response(content=buf.getvalue(), media_type="application/zip",
+                        headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
     # Serve the built frontend last (API routes above win for /api/*).
     if frontend_dir is not None:

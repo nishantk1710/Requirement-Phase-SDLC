@@ -7,9 +7,12 @@ import {
   applyRecommendedDecisions,
   autoAccept,
   deleteProject,
+  downloadHandoffZip,
   getArtifact,
   getConfig,
   getCorpora,
+  getFsList,
+  getFsRoots,
   getDecisions,
   getGate,
   getGenerateStatus,
@@ -497,7 +500,7 @@ export function App() {
           </div>
         )}
         {genStatus.data?.state === "done"
-          ? <Results pid={pid} />
+          ? <><Results pid={pid} /><AssetPicker pid={pid} /></>
           : !generating && <p className="muted">No documents yet — go to Review and click <b>Generate SRS / RTM</b>.</p>}
       </section>
       )}
@@ -652,6 +655,144 @@ function Results({ pid }: { pid: string }) {
           ? <div className="doc gate-blocked">Could not load {tab}: {(doc.error as Error).message}</div>
           : <Markdown text={doc.data ?? ""} />}
     </>
+  );
+}
+
+// An in-app file explorer that browses the LOCAL disk via the backend (no browser upload). The
+// user navigates folders and ticks files; "Add" returns their absolute paths to the caller.
+function FileExplorer({ target, onAdd, onClose }: {
+  target: "asset1" | "asset2"; onAdd: (paths: string[]) => void; onClose: () => void;
+}) {
+  const [roots, setRoots] = useState<{ name: string; path: string }[]>([]);
+  const [cwd, setCwd] = useState<string>("");
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const listing = useQuery({ queryKey: ["fs", cwd], queryFn: () => getFsList(cwd), enabled: !!cwd });
+
+  useEffect(() => {
+    getFsRoots().then((r) => { setRoots(r.roots); setCwd(r.cwd || r.roots[0]?.path || ""); }).catch(() => { /* ignore */ });
+  }, []);
+
+  const go = (p: string) => { setSel(new Set()); setCwd(p); };
+  const toggle = (p: string) => { const n = new Set(sel); if (n.has(p)) n.delete(p); else n.add(p); setSel(n); };
+  const data = listing.data;
+
+  return (
+    <div className="fx-overlay" onClick={onClose}>
+      <div className="fx-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="fx-head">
+          <b>Select files — {target === "asset1" ? "Asset 1 (design elements)" : "Asset 2 (static images)"}</b>
+          <button type="button" className="fx-close" title="close" onClick={onClose}>×</button>
+        </div>
+        <div className="fx-roots">
+          {roots.map((r) => (
+            <button type="button" key={r.path} className={data?.path?.startsWith(r.path) ? "on" : ""} onClick={() => go(r.path)}>{r.name}</button>
+          ))}
+        </div>
+        <div className="fx-path">
+          <button type="button" disabled={!data?.parent} onClick={() => data?.parent && go(data.parent)}>↑ Up</button>
+          <span className="fx-cwd" title={data?.path ?? cwd}>{data?.path ?? cwd ?? "…"}</span>
+        </div>
+        <div className="fx-list">
+          {listing.isLoading && <p className="muted">Loading…</p>}
+          {listing.isError && <p className="gate-blocked">{(listing.error as Error).message}</p>}
+          {data?.entries.map((e) => e.is_dir ? (
+            <div key={e.path} className="fx-row fx-dir" onClick={() => go(e.path)} title={e.name}>
+              <span className="fx-ic">📁</span><span className="fx-name">{e.name}</span>
+            </div>
+          ) : (
+            <label key={e.path} className={`fx-row fx-file ${sel.has(e.path) ? "sel" : ""}`}>
+              <input type="checkbox" checked={sel.has(e.path)} onChange={() => toggle(e.path)} />
+              <span className="fx-ic">{e.is_image ? "🖼️" : "📄"}</span>
+              <span className="fx-name" title={e.name}>{e.name}</span>
+              <span className="muted small fx-size">{e.size}</span>
+            </label>
+          ))}
+          {data && data.entries.length === 0 && <p className="muted">This folder is empty.</p>}
+        </div>
+        <div className="fx-foot">
+          <span className="muted small">{sel.size} file(s) selected</span>
+          <div className="fx-foot-actions">
+            <button type="button" onClick={onClose}>Cancel</button>
+            <button type="button" className="btn-primary sm" disabled={sel.size === 0}
+                    onClick={() => { onAdd([...sel]); onClose(); }}>Add {sel.size} file(s)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Browse the local disk and select files for each asset folder, then download the whole handoff as
+// a ZIP (SRS + asset1/ + asset2/). Files are read locally by the backend — nothing is uploaded.
+function AssetPicker({ pid }: { pid: string }) {
+  const [a1, setA1] = useState<string[]>([]);
+  const [a2, setA2] = useState<string[]>([]);
+  const [explorer, setExplorer] = useState<null | "asset1" | "asset2">(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const baseName = (p: string) => p.split(/[\\/]/).pop() || p;
+  const addPaths = (target: "asset1" | "asset2", paths: string[]) => {
+    const setter = target === "asset1" ? setA1 : setA2;
+    setter((cur) => Array.from(new Set([...cur, ...paths])));
+  };
+  const removeAt = (setter: React.Dispatch<React.SetStateAction<string[]>>, i: number) =>
+    setter((cur) => cur.filter((_, idx) => idx !== i));
+
+  const download = async () => {
+    setBusy(true); setErr("");
+    try { await downloadHandoffZip(pid, a1, a2); }
+    catch (e) { setErr((e as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  const column = (
+    files: string[], setter: React.Dispatch<React.SetStateAction<string[]>>,
+    target: "asset1" | "asset2", title: string,
+  ) => (
+    <div className="asset-col">
+      <div className="asset-col-head">
+        <b>{title}</b><span className="muted small">{files.length} file(s)</span>
+      </div>
+      <button type="button" className="btn-ghost" onClick={() => setExplorer(target)}>Browse files…</button>
+      {files.length === 0
+        ? <p className="asset-empty muted small">No files chosen yet.</p>
+        : <ul className="asset-files">
+            {files.map((p, i) => (
+              <li key={`${p}:${i}`}>
+                <span className="asset-fname" title={p}>{baseName(p)}</span>
+                <button type="button" className="asset-x" title="remove" onClick={() => removeAt(setter, i)}>×</button>
+              </li>
+            ))}
+          </ul>}
+    </div>
+  );
+
+  return (
+    <div className="assetpicker">
+      <div className="reviewhead">
+        <h3>Handoff package — choose assets</h3>
+        <span className="counts">Asset 1: {a1.length} · Asset 2: {a2.length}</span>
+      </div>
+      <p className="muted small">
+        Browse your computer and pick files for each folder — nothing is uploaded; files are read
+        locally and packaged into the ZIP.
+      </p>
+      <div className="asset-cols">
+        {column(a1, setA1, "asset1", "Asset 1 — design elements")}
+        {column(a2, setA2, "asset2", "Asset 2 — static images")}
+      </div>
+      {err && <p className="gate-blocked">{err}</p>}
+      <div className="phase-cta">
+        <button type="button" className="btn-primary lg" disabled={busy} onClick={() => void download()}>
+          {busy ? "Packaging…" : "Download handoff package (.zip)"}
+        </button>
+      </div>
+      {explorer && (
+        <FileExplorer target={explorer} onClose={() => setExplorer(null)}
+                      onAdd={(paths) => addPaths(explorer, paths)} />
+      )}
+    </div>
   );
 }
 
