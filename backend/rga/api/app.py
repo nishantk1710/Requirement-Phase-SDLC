@@ -629,14 +629,15 @@ def create_app(
             # manifest.json is operational metadata describing the pack, not a deliverable document.
             files = {
                 "SRS.md": pack["srs_markdown"],
-                "RTM.md": pack["rtm_markdown"],
+                "RTM.csv": pack["rtm_csv"],                      # RTM is delivered as CSV now
                 "manifest.json": json.dumps(pack["manifest"], indent=2),
             }
             outdir = Path("handoff") / safe_dir_component(pid)
             outdir.mkdir(parents=True, exist_ok=True)
             # remove stale pack files from a previous (pre-alignment) run so the on-disk pack is
             # exactly {SRS, RTM, manifest} (Part J) — no leftover seed-models / open-questions files.
-            for stale in ("open-questions.md", "seed-models.md", "open-questions.docx", "seed-models.docx"):
+            for stale in ("open-questions.md", "seed-models.md", "open-questions.docx",
+                          "seed-models.docx", "RTM.md", "RTM.docx"):   # RTM.md/.docx replaced by RTM.csv
                 (outdir / stale).unlink(missing_ok=True)
             for name, content in files.items():
                 (outdir / name).write_text(content, encoding="utf-8")
@@ -753,8 +754,6 @@ def create_app(
     async def get_artifact(pid: str, name: str):
         # binary Word docs are served from disk as a download; text (.md/.json) is served inline
         if name.endswith(".docx"):
-            from fastapi.responses import Response
-
             p = Path("handoff") / safe_dir_component(pid) / name
             if not p.exists():
                 raise HTTPException(status_code=404, detail=f"no artifact '{name}'")
@@ -766,9 +765,14 @@ def create_app(
         content = app.state.artifacts.get(pid, {}).get(name)
         if content is None:
             p = Path("handoff") / safe_dir_component(pid) / name
-            if p.exists():
-                return p.read_text(encoding="utf-8")
-            raise HTTPException(status_code=404, detail=f"no artifact '{name}'")
+            if not p.exists():
+                raise HTTPException(status_code=404, detail=f"no artifact '{name}'")
+            content = p.read_text(encoding="utf-8")
+        if name.endswith(".csv"):
+            # correct MIME + filename so the browser saves it as .csv (not .txt); the RTM preview
+            # still reads it fine via fetch(). text/plain with no filename made browsers append .txt.
+            return Response(content=content, media_type="text/csv",
+                            headers={"Content-Disposition": f'attachment; filename="{name}"'})
         return content
 
     # ---- local file browser + ZIP handoff --------------------------------
@@ -837,7 +841,7 @@ def create_app(
                                 detail="generate the SRS first — no handoff pack found for this project")
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-            for name in ("SRS.docx", "SRS.md", "RTM.docx", "RTM.md", "manifest.json"):
+            for name in ("SRS.docx", "SRS.md", "RTM.csv", "manifest.json"):
                 f = outdir / name
                 if f.exists():
                     z.write(f, arcname=name)

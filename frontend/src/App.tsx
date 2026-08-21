@@ -637,23 +637,65 @@ function Markdown({ text }: { text: string }) {
   return <div className="doc">{out}</div>;
 }
 
-type ArtifactTab = "SRS.md" | "RTM.md";   // pack = SRS + RTM only; Appendix C lives inside the SRS (Part J)
+// Minimal RFC-4180 CSV parser (quoted fields, "" escapes, embedded commas/newlines) for the RTM view.
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [], field = "", inQ = false, i = 0;
+  while (i < text.length) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i += 2; continue; } inQ = false; i++; continue; }
+      field += c; i++; continue;
+    }
+    if (c === '"') { inQ = true; i++; continue; }
+    if (c === ",") { row.push(field); field = ""; i++; continue; }
+    if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; i++; continue; }
+    if (c === "\r") { i++; continue; }
+    field += c; i++;
+  }
+  if (field !== "" || row.length) { row.push(field); rows.push(row); }
+  return rows.filter((r) => r.some((c) => c !== ""));
+}
+
+function CsvTable({ text }: { text: string }) {
+  const rows = parseCsv(text);
+  if (rows.length === 0) return <div className="doc muted">Empty.</div>;
+  const [head, ...body] = rows;
+  return (
+    <div className="doc tablewrap">
+      <table className="csvtable">
+        <thead><tr>{head.map((h, i) => <th key={i}>{h}</th>)}</tr></thead>
+        <tbody>
+          {body.map((r, ri) => (
+            <tr key={ri}>{head.map((_, ci) => <td key={ci}>{r[ci] ?? ""}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+type ArtifactTab = "SRS.md" | "RTM.csv";   // SRS is Markdown/.docx; RTM is now a CSV
 function Results({ pid }: { pid: string }) {
   const [tab, setTab] = useState<ArtifactTab>("SRS.md");
   const doc = useQuery({ queryKey: ["artifact", pid, tab], queryFn: () => getArtifact(pid, tab) });
+  const isRtm = tab === "RTM.csv";
+  const dlHref = isRtm ? `/api/projects/${pid}/artifacts/RTM.csv` : `/api/projects/${pid}/artifacts/SRS.docx`;
   return (
     <>
       <div className="tabs doctabs">
         <button className={tab === "SRS.md" ? "on" : ""} onClick={() => setTab("SRS.md")}>SRS (IEEE-830)</button>
-        <button className={tab === "RTM.md" ? "on" : ""} onClick={() => setTab("RTM.md")}>Traceability Matrix</button>
-        <span className="muted small dl-note">saved to handoff/{pid}/ (.md + .docx)</span>
-        <a className="dl-docx dl-right" href={`/api/projects/${pid}/artifacts/${tab.replace(".md", ".docx")}`} download>Download (.docx)</a>
+        <button className={isRtm ? "on" : ""} onClick={() => setTab("RTM.csv")}>Traceability Matrix</button>
+        <span className="muted small dl-note">saved to handoff/{pid}/ (SRS .md/.docx · RTM .csv)</span>
+        <a className="dl-docx dl-right" href={dlHref} download>{isRtm ? "Download (.csv)" : "Download (.docx)"}</a>
       </div>
       {doc.isLoading
         ? <div className="doc">Loading…</div>
         : doc.isError
           ? <div className="doc gate-blocked">Could not load {tab}: {(doc.error as Error).message}</div>
-          : <Markdown text={doc.data ?? ""} />}
+          : isRtm
+            ? <CsvTable text={doc.data ?? ""} />
+            : <Markdown text={doc.data ?? ""} />}
     </>
   );
 }

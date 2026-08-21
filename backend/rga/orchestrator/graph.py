@@ -149,9 +149,10 @@ def build_graph(
         # Design-phase handoff pack = cleaned SRS + cleaned RTM only (Part J); no seed-models /
         # open-questions files (Appendix C lives inside the SRS). manifest.json is operational metadata.
         (outdir / "SRS.md").write_text(pack["srs_markdown"], encoding="utf-8")
-        (outdir / "RTM.md").write_text(pack["rtm_markdown"], encoding="utf-8")
+        (outdir / "RTM.csv").write_text(pack["rtm_csv"], encoding="utf-8")   # RTM delivered as CSV
         # remove stale pack files from a previous (pre-alignment) run so the on-disk pack is exact
-        for stale in ("open-questions.md", "seed-models.md", "open-questions.docx", "seed-models.docx"):
+        for stale in ("open-questions.md", "seed-models.md", "open-questions.docx",
+                      "seed-models.docx", "RTM.md", "RTM.docx"):
             (outdir / stale).unlink(missing_ok=True)
         import json as _json
 
@@ -161,7 +162,6 @@ def build_graph(
 
         write_docx_versions(outdir, {
             "SRS.md": pack["srs_markdown"],
-            "RTM.md": pack["rtm_markdown"],
         })
         return {
             "stage": "RTM_GENERATED",

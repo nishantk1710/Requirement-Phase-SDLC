@@ -183,7 +183,7 @@ def cmd_generate(args) -> None:
     outdir = Path(args.out or ("handoff/" + safe_dir_component(args.project)))
     outdir.mkdir(parents=True, exist_ok=True)
     (outdir / "SRS.md").write_text(pack["srs_markdown"], encoding="utf-8")
-    (outdir / "RTM.md").write_text(pack["rtm_markdown"], encoding="utf-8")
+    (outdir / "RTM.csv").write_text(pack["rtm_csv"], encoding="utf-8")
     (outdir / "open-questions.md").write_text(
         "# Open Questions (Appendix C)\n\n" + open_questions_markdown(pack["open_questions"]),
         encoding="utf-8",
@@ -198,14 +198,13 @@ def cmd_generate(args) -> None:
 
     docx_names = write_docx_versions(outdir, {
         "SRS.md": pack["srs_markdown"],
-        "RTM.md": pack["rtm_markdown"],
         "open-questions.md": "# Open Questions (Appendix C)\n\n" + open_questions_markdown(pack["open_questions"]),
         "seed-models.md": "# Seed Models (Appendix B — DRAFT)\n\n" + seed_models_markdown(pack["seed_models"]),
     })
     u = _underlying(prov) if prov else None
     print(json.dumps({
         "out": str(outdir),
-        "files": ["SRS.md", "RTM.md", "open-questions.md", "seed-models.md", "manifest.json"] + docx_names,
+        "files": ["SRS.md", "RTM.csv", "open-questions.md", "seed-models.md", "manifest.json"] + docx_names,
         **pack["manifest"],
         "tokens_in": getattr(u, "tokens_in", None) if u else None,
         "tokens_out": getattr(u, "tokens_out", None) if u else None,

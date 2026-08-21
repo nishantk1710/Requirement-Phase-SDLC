@@ -188,9 +188,10 @@ async def test_tc8_3_handoff_pack_matches_wave1_scope(repo, tmp_path):
     outdir = tmp_path / "handoff"
     # Part J: the pack is the cleaned SRS + RTM only (+ operational manifest) — no seed-models /
     # open-questions files.
-    for f in ("SRS.md", "RTM.md", "manifest.json"):
+    for f in ("SRS.md", "RTM.csv", "manifest.json"):
         assert (outdir / f).exists(), f
-    for absent in ("open-questions.md", "seed-models.md", "seed-models.docx", "open-questions.docx"):
+    for absent in ("open-questions.md", "seed-models.md", "seed-models.docx", "open-questions.docx",
+                   "RTM.md", "RTM.docx"):
         assert not (outdir / absent).exists(), f"pack must not contain {absent}"
     manifest = json.loads((outdir / "manifest.json").read_text())
     assert manifest["traceability_complete"] is True

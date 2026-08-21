@@ -35,7 +35,7 @@ async def env(tmp_path, monkeypatch):
     hd.mkdir(parents=True)
     (hd / "SRS.docx").write_bytes(b"docx-bytes")
     (hd / "SRS.md").write_text("# SRS")
-    (hd / "RTM.md").write_text("# RTM")
+    (hd / "RTM.csv").write_text("ID,Category,SRS Section,Requirement,Design,Implementation,Testing,Status\n")
     (hd / "manifest.json").write_text("{}")
     db = Database(str(tmp_path / "z.db"))
     await db.init()
@@ -87,7 +87,7 @@ async def test_zip_bundles_selected_local_files(client, env):
     r = await client.post(f"/api/projects/{PID}/handoff-zip", json=body)
     assert r.status_code == 200 and r.headers["content-type"] == "application/zip"
     names = set(zipfile.ZipFile(io.BytesIO(r.content)).namelist())
-    assert {"SRS.docx", "SRS.md", "RTM.md", "manifest.json"} <= names       # the handoff pack
+    assert {"SRS.docx", "SRS.md", "RTM.csv", "manifest.json"} <= names       # the handoff pack
     assert {"asset1/logo.png", "asset1/icon.svg", "asset2/hero.jpg"} <= names  # selected local files
 
 
@@ -104,3 +104,11 @@ async def test_zip_skips_missing_paths(client, env):
 async def test_zip_refused_before_generation(client):
     r = await client.post("/api/projects/P-UNGENERATED/handoff-zip", json={"asset1": [], "asset2": []})
     assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_rtm_csv_is_served_as_a_downloadable_csv(client):
+    r = await client.get(f"/api/projects/{PID}/artifacts/RTM.csv")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/csv")               # not text/plain -> saves as .csv
+    assert 'filename="RTM.csv"' in r.headers.get("content-disposition", "")

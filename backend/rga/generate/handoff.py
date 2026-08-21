@@ -15,13 +15,42 @@ from ..logging_setup import get_logger
 from ..models import Requirement
 from ..review.gate import approved_only, counts, ready_for_generation
 from .common import approved_sorted
+from .glossary import glossary_rows
 from .open_questions import compile_open_questions, reconcile_open_questions
-from .rtm import build_rtm, rtm_markdown, traceability_check
+from .rtm import build_rtm, build_rtm_matrix, rtm_csv, rtm_markdown, traceability_check
 from .srs import generate_srs
 from .srs_template import assign_srs_ids
 from .srs_validator import FormatInvalid, validate_markdown
 
 log = get_logger("rga.generate")
+
+# §3.1 token tables that become "Design & UI" rows in the RTM (section number -> friendly label,
+# so the RTM's "SRS Section" column reads consistently with the requirement sections).
+_DESIGN_TOKEN_SECTIONS = {
+    "3.1.2": "3.1.2 Colour Tokens",
+    "3.1.3": "3.1.3 Typography Tokens",
+    "3.1.4": "3.1.4 Spacing, Radius and Elevation Tokens",
+}
+
+
+def _design_elements(design: dict[str, str]) -> list[dict]:
+    """Parse the generated §3.1 token tables (colour / typography / spacing) into RTM rows — one per
+    token. Reuses the exact generated markdown, so the RTM matches the SRS §3.1 tables verbatim. The
+    token name is the row ID, so the Requirement column carries just its value + usage."""
+    out: list[dict] = []
+    for sec, label in _DESIGN_TOKEN_SECTIONS.items():
+        for line in (design.get(sec) or "").splitlines():
+            s = line.strip()
+            if not s.startswith("|"):
+                continue                                            # skip prose / accent-palette list
+            cells = [c.strip().strip("`") for c in s.strip("|").split("|")]
+            if not cells or cells[0].lower() == "token":
+                continue                                            # header row
+            if set("".join(cells)) <= set("-"):
+                continue                                            # separator row
+            name, rest = cells[0], " · ".join(c for c in cells[1:] if c)
+            out.append({"id": name, "section": label, "text": rest or name})
+    return out
 
 
 class GateNotOpen(RuntimeError):
@@ -98,7 +127,12 @@ def generate_handoff(
         if strict_format:
             raise FormatInvalid(fmt["summary"])
 
-    rtm_rows = build_rtm(approved, id_map)
+    rtm_rows = build_rtm(approved, id_map)                          # internal projection (gate + count)
+    # Delivered RTM = CSV: SRS requirements + Design/UI elements (§3.1) + glossary terms, with blank
+    # Design/Implementation/Testing/Status columns for the team to fill downstream.
+    rtm_matrix = build_rtm_matrix(approved, id_map,
+                                  design_elements=_design_elements(design),
+                                  glossary_terms=glossary_rows(approved))
     trace = traceability_check(approved)
     if not trace["complete"]:
         # ENFORCE the traceability invariant at the point it matters — never hand off an approved
@@ -138,6 +172,7 @@ def generate_handoff(
         "srs_markdown": srs_md,
         "rtm_rows": rtm_rows,
         "rtm_markdown": rtm_markdown(rtm_rows),
+        "rtm_csv": rtm_csv(rtm_matrix),
         "open_questions": oq,
         "traceability": trace,
         "manifest": manifest,

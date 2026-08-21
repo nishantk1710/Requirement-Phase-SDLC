@@ -8,11 +8,72 @@ contain a line that does not trace back to a source, and vice-versa (P7 TC7.2).
 
 from __future__ import annotations
 
+import csv
+import io
+
 from ..models import Requirement
 from .common import approved_sorted, md_cell, source_label, source_quotes
 from .srs_template import assign_srs_ids, section_for
 
 RTM_COLUMNS = ["SRS ID", "Internal ID", "Requirement", "Type", "Priority", "SRS Section", "Source(s)", "Evidence"]
+
+# The delivered RTM is a CSV whose rows are the SRS items (requirements + Design/UI elements +
+# glossary terms). The trailing phase/status columns are intentionally BLANK — a template the team
+# fills as the SRS is traced through Design → Implementation → Testing, plus a per-item Status.
+RTM_CSV_COLUMNS = ["ID", "Category", "SRS Section", "Requirement",
+                   "Design", "Implementation", "Testing", "Status"]
+_RTM_BLANK = ["", "", "", ""]   # Design, Implementation, Testing, Status — for future use
+
+_CATEGORY_LABEL = {
+    "functional": "Functional", "non_functional": "Non-Functional", "business": "Business Rule",
+    "constraint": "Constraint", "assumption": "Assumption",
+}
+
+
+def build_rtm_matrix(
+    requirements: list[Requirement], id_map: dict[str, str] | None = None, *,
+    design_elements: list[dict] | None = None, glossary_terms: list[tuple[str, str]] | None = None,
+) -> list[dict]:
+    """Rows for the delivered RTM CSV: every requirement in the SRS, then the Design/UI elements
+    (§3.1 tokens), then the glossary terms (Appendix A). Each row carries its id, category, SRS
+    section and the item text (the `Requirement` column); phase/status columns are added blank when
+    the CSV is rendered. Reuses `build_rtm` for the requirement ordering + id/section, so the RTM and
+    SRS always agree."""
+    rows: list[dict] = []
+    con = asm = 0
+    for r in build_rtm(requirements, id_map):                       # requirements (REQ/NFR/BR/…)
+        sid = r["srs_id"]
+        if sid == "—":                                              # constraints/assumptions carry no tag
+            if r["rtype"] == "constraint":
+                con += 1
+                sid = f"CON-{con}"
+            elif r["rtype"] == "assumption":
+                asm += 1
+                sid = f"ASM-{asm}"
+            else:
+                sid = r["internal_id"]
+        rows.append({
+            "id": sid,
+            "category": _CATEGORY_LABEL.get(r["rtype"], r["rtype"].replace("_", " ").title()),
+            "section": r["section"],
+            "requirement": r["statement"],
+        })
+    for e in (design_elements or []):                               # Design & UI elements (§3.1)
+        rows.append({"id": e["id"], "category": "Design & UI", "section": e["section"], "requirement": e["text"]})
+    for i, (term, defn) in enumerate(glossary_terms or [], 1):      # glossary terms (Appendix A)
+        rows.append({"id": f"TERM-{i}", "category": "Glossary", "section": "Appendix A",
+                     "requirement": f"{term} — {defn}"})
+    return rows
+
+
+def rtm_csv(rows: list[dict]) -> str:
+    """Render the RTM rows as CSV (RFC-4180 quoting via the csv module — safe for commas/quotes)."""
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(RTM_CSV_COLUMNS)
+    for row in rows:
+        w.writerow([row["id"], row["category"], row["section"], row["requirement"], *_RTM_BLANK])
+    return buf.getvalue()
 
 
 def build_rtm(requirements: list[Requirement], id_map: dict[str, str] | None = None) -> list[dict]:

@@ -355,6 +355,12 @@ header.topbar .brand { cursor: pointer; }
 /* The wide review table scrolls horizontally WITHIN its own box, so it can never push the page
    layout out or clip the Decision column — every column stays reachable. */
 .tablewrap { max-width: 100%; overflow-x: auto; }
+
+/* RTM CSV rendered as a table */
+.csvtable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.csvtable th, .csvtable td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+.csvtable th { background: var(--accent-tint); font-weight: 600; white-space: nowrap; }
+.csvtable tbody tr:nth-child(even) td { background: var(--bg-soft); }
 table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
 thead th {
   text-align: left; color: var(--faint); font-weight: 600; font-size: 11.5px; text-transform: uppercase;
