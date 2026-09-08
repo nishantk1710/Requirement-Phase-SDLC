@@ -99,16 +99,21 @@ class LLMProvider(ABC):
         temperature: float | None = None,
         max_tokens: int | None = None,
         timeout_s: float | None = None,
+        max_attempts: int | None = None,
     ) -> str:
         temperature = self.temperature if temperature is None else temperature
         max_tokens = self.max_tokens if max_tokens is None else max_tokens
+        # `max_attempts` (when given) caps the retry budget for THIS call — used by best-effort steps
+        # (e.g. SRS prose) that degrade gracefully and must fail FAST when the provider is stalling,
+        # rather than grinding through the full default retry budget.
+        eff_attempts = self.max_attempts if max_attempts is None else max(1, max_attempts)
         last_exc: Exception | None = None
-        for attempt in range(1, self.max_attempts + 1):
+        for attempt in range(1, eff_attempts + 1):
             try:
                 return self._call_with_timeout(system, user, temperature, max_tokens, timeout_s)
             except (TransientLLMError, LLMTimeoutError) as exc:
                 last_exc = exc
-                if attempt >= self.max_attempts:
+                if attempt >= eff_attempts:
                     break
                 backoff = self.base_backoff_s * (2 ** (attempt - 1)) + random.uniform(
                     0, self.base_backoff_s
@@ -122,7 +127,7 @@ class LLMProvider(ABC):
                 )
                 self._sleep(backoff)
         assert last_exc is not None
-        log.error("LLM call failed after %d attempts", self.max_attempts)
+        log.error("LLM call failed after %d attempts", eff_attempts)
         raise last_exc
 
     def structured(
@@ -134,6 +139,7 @@ class LLMProvider(ABC):
         temperature: float | None = None,
         max_tokens: int | None = None,
         timeout_s: float | None = None,
+        max_attempts: int | None = None,
     ) -> T:
         schema_json = json.dumps(schema.model_json_schema())
         instruction = (
@@ -147,7 +153,7 @@ class LLMProvider(ABC):
         for repair in range(self.max_repair + 1):
             try:
                 raw = self.complete(system, prompt, temperature=temperature, max_tokens=eff_max,
-                                    timeout_s=timeout_s)
+                                    timeout_s=timeout_s, max_attempts=max_attempts)
             except LLMTruncationError as err:
                 # truncated JSON is unrepairable by re-prompting — grow the budget and retry (B-M1)
                 last_err = err

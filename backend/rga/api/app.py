@@ -363,6 +363,34 @@ def create_app(
         ok, reason = ready_for_generation(reqs)
         return {"ready": ok, "reason": reason, "counts": counts(reqs)}
 
+    @app.get("/api/projects/{pid}/changes")
+    async def changes(pid: str) -> dict:
+        """Delta of the CURRENT approved set vs the latest baseline (added / modified / removed) —
+        the agile 'what changed since the last SRS' view. `has_baseline` is False (and the delta is
+        empty) until the first SRS has been generated.
+
+        `review_complete` reports whether the review gate is open (≥1 approved, nothing pending). The
+        delta is only FINAL when review is complete: mid-review — e.g. right after a fresh pipeline
+        run, when requirements are still `candidate` — an un-reviewed requirement is missing from the
+        approved set and would misread as 'removed', so the UI shows the delta only once this is True."""
+        from ..review.changes import compute_changes
+
+        prev = await repo.latest_baseline(pid)
+        reqs = await repo.list_requirements(pid)
+        ready, _ = ready_for_generation(reqs)
+        if prev is None:
+            return {"has_baseline": False, "review_complete": ready, "baseline_version": 0,
+                    "added": [], "modified": [], "removed": [], "unchanged": 0,
+                    "summary": {"added": 0, "modified": 0, "removed": 0, "unchanged": 0},
+                    "total_changes": 0}
+        return {"has_baseline": True, "review_complete": ready, "baseline_version": prev["version"],
+                **compute_changes(reqs, prev["snapshot"])}
+
+    @app.get("/api/projects/{pid}/baselines")
+    async def baselines(pid: str) -> dict:
+        """The project's baseline history (version + reason + date) — the SRS Revision History."""
+        return {"baselines": await repo.list_baselines(pid)}
+
     @app.get("/api/projects/{pid}/decisions")
     async def decisions(pid: str) -> dict:
         """Review by DECISION, not by requirement (#3, #6, #7): clustered, owner-routed, each with a
@@ -615,14 +643,49 @@ def create_app(
             ts_sel = {r["decision_id"].split("::", 1)[1]: r.get("action")
                       for r in ts_res
                       if str(r.get("decision_id", "")).startswith("tech-stack::") and r.get("action")}
+            # Baseline / versioning (agile iterations): version = prior baseline + 1; the Revision
+            # History lists every baseline, and this version's reason is the delta vs the last one.
+            from ..review.changes import compute_changes, delta_reason, snapshot_approved
+
+            prev = await repo.latest_baseline(pid)
+            prior_baselines = await repo.list_baselines(pid)
+            today = datetime.date.today().isoformat()
+            if prev is None:
+                new_version = 1
+                reason = "Initial draft generated from approved requirements"
+                is_new_version = True
+            else:
+                delta = compute_changes(reqs, prev["snapshot"])
+                if delta["total_changes"] == 0:
+                    # Regeneration with no requirement changes: keep the SAME version and refresh the
+                    # existing baseline in place — don't append a pointless "no changes" revision.
+                    new_version, reason, is_new_version = prev["version"], prev["reason"], False
+                else:
+                    new_version = prev["version"] + 1
+                    reason = delta_reason(delta)
+                    is_new_version = True
+            # prior_baselines already carries the row for a kept (unchanged) version, so only a
+            # genuinely NEW version appends a row to the Revision History.
+            revision_rows = [{"name": "RGA", "date": b["created_at"][:10], "reason": b["reason"],
+                              "version": f"{b['version']}.0"} for b in prior_baselines]
+            if is_new_version:
+                revision_rows.append({"name": "RGA", "date": today, "reason": reason,
+                                      "version": f"{new_version}.0"})
+            # Keep the FIRST generation byte-identical to the sequential flow (default v1.0 title +
+            # the original single-row Revision History); only iterations (v2+) get a computed version
+            # and the growing, baseline-driven Revision History.
+            srs_version = f"{new_version}.0" if new_version >= 2 else None
+            rev_rows = revision_rows if new_version >= 2 else None
             gprogress("assembling",
-                      f"Drafting SRS narrative + assembling SRS/RTM for {approved_n} approved requirements…")
+                      f"Drafting SRS v{new_version}.0 + assembling SRS/RTM for {approved_n} approved requirements…")
             pack = await asyncio.to_thread(
                 generate_handoff, reqs, project_name=pid.strip(),
-                date=datetime.date.today().isoformat(), provider=provider,
+                date=today, provider=provider,
                 open_questions=oq, run_narrative=(provider is not None),
                 tech_stack=tech_stack, tech_stack_selection=ts_sel,
+                srs_version=srs_version, revision_rows=rev_rows,
             )
+            pack["manifest"]["srs_version"] = f"{new_version}.0"
             gprogress("writing", "Writing SRS, RTM, seed models, open-questions…")
             # Design-phase handoff pack = the cleaned SRS + cleaned RTM ONLY (Part J). Appendix C
             # lives inside the SRS; no seed-models file, no separate open-questions file, no diagrams.
@@ -646,6 +709,13 @@ def create_app(
 
             docx_names = write_docx_versions(outdir, {k: v for k, v in files.items() if k.endswith(".md")})
             app.state.artifacts[pid] = files
+            # freeze this generation as baseline vN (the delta view diffs later edits against it);
+            # a no-change regeneration refreshes the existing baseline instead of adding a version.
+            snap = snapshot_approved(reqs)
+            if is_new_version:
+                await repo.save_baseline(pid, new_version, reason, snap)
+            else:
+                await repo.refresh_baseline(pid, new_version, snap)
             gj.update(state="done", stage="done", count=approved_n,
                       files=list(files.keys()) + docx_names,
                       out_dir=str(outdir), manifest=pack["manifest"],
@@ -732,8 +802,9 @@ def create_app(
     # ---- reset / delete ---------------------------------------------------
     @app.delete("/api/projects/{pid}")
     async def delete_project(pid: str) -> dict:
-        """Clear ALL data for one project (requirements, chunks, decisions, runs)."""
+        """Clear ALL data for one project (requirements, chunks, decisions, runs, baselines)."""
         removed = await repo.delete_project(pid)
+        await repo.delete_baselines(pid)
         app.state.jobs.pop(pid, None)
         app.state.artifacts.pop(pid, None)
         return {"deleted": True, "project": pid, "requirements_removed": removed}

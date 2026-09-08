@@ -113,7 +113,10 @@ def _derive_personality(provider: LLMProvider | None, requirements: list[Require
     sample = "\n".join(f"- {r.statement}" for r in requirements[:40])
     user = f"PROJECT: {project_name}\nREQUIREMENTS (sample):\n{sample}\n\nDerive the visual personality."
     try:
-        p = provider.structured(_PERSONALITY_SYSTEM, user, Personality, max_tokens=400, timeout_s=120.0)
+        # Best-effort: bound the budget so a stalling provider falls back to the derived palette
+        # FAST (≤ ~90s worst case) rather than grinding through the full default retry budget.
+        p = provider.structured(_PERSONALITY_SYSTEM, user, Personality, max_tokens=400,
+                                timeout_s=45.0, max_attempts=2)
     except Exception:
         return fb
     if p.primary_hue_family not in OPEN_COLOR:

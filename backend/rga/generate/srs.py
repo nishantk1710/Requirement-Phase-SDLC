@@ -23,7 +23,7 @@ line-by-line (TC7.1/TC7.2).
 from __future__ import annotations
 
 from ..models import Requirement, RType
-from .common import DEFERRED, NONE_ITEMS, TBD, approved_sorted, md_line
+from .common import DEFERRED, NONE_ITEMS, TBD, approved_sorted, md_cell, md_line
 from .glossary import glossary_markdown
 from .open_questions import open_questions_markdown
 from .srs_template import (
@@ -99,7 +99,8 @@ def _toc_outline() -> list[str]:
     return out
 
 
-def _table(title: str, project_name: str, date: str) -> list[str]:
+def _table(title: str, project_name: str, date: str, *,
+           version: str | None = None, revision_rows: list[dict] | None = None) -> list[str]:
     spec = TABLE_SPECS.get(title)
     if title == "Title Page":
         # Wrapped in a marker the docx export renders as a CENTRED, page-1 title block (page break
@@ -110,7 +111,7 @@ def _table(title: str, project_name: str, date: str) -> list[str]:
             "# Software Requirements Specification",
             "for",
             project_name,
-            "Version 1.0 approved",
+            f"Version {version or '1.0'} approved",
             "Prepared by RGA (Agentic Requirement Gathering & Analysis)",
             f"{date}",
             "Document format based on the IEEE SRS template. Copyright © 1999 by Karl E. Wiegers. "
@@ -120,11 +121,14 @@ def _table(title: str, project_name: str, date: str) -> list[str]:
     if title == "Table of Contents":
         return _toc_outline()
     if title == "Revision History":
-        return [
-            "| " + " | ".join(spec) + " |",
-            "|" + "|".join(["---"] * len(spec)) + "|",
-            f"| RGA | {date} | Initial draft generated from approved requirements | 0.1 |",
-        ]
+        header = ["| " + " | ".join(spec) + " |", "|" + "|".join(["---"] * len(spec)) + "|"]
+        if revision_rows:  # one row per baseline version (agile iterations)
+            return header + [
+                f"| {md_cell(str(r.get('name', 'RGA')))} | {md_cell(str(r.get('date', date)))} | "
+                f"{md_cell(str(r.get('reason', '')))} | {md_cell(str(r.get('version', '')))} |"
+                for r in revision_rows
+            ]
+        return header + [f"| RGA | {date} | Initial draft generated from approved requirements | 0.1 |"]
     if spec:  # generic empty table with header + a TBD row
         return [
             "| " + " | ".join(spec) + " |",
@@ -309,6 +313,8 @@ def generate_srs(
     tech_stack: dict | None = None,
     tech_stack_selection: dict | None = None,   # aspect key -> chosen candidate name
     design_tokens: dict[str, str] | None = None,   # section number -> §3.1.x markdown (Parts B/C)
+    srs_version: str | None = None,               # title-page version (default "1.0")
+    revision_rows: list[dict] | None = None,      # Revision History rows from baselines (agile)
 ) -> str:
     """Assemble the full IEEE-830 SRS (Markdown) from APPROVED requirements only.
 
@@ -335,7 +341,8 @@ def generate_srs(
             continue
 
         if title == "Title Page":  # the title-page body is its own H1; no extra heading
-            blocks.append("\n".join(_table(title, project_name, date)))
+            blocks.append("\n".join(_table(title, project_name, date,
+                                           version=srs_version, revision_rows=revision_rows)))
             continue
 
         heading = _heading(num, title)
@@ -359,7 +366,7 @@ def generate_srs(
         elif mode == "design":  # later-phase artifact: LLM prose if drafted, else "Deferred..."
             body = [narrative.get(num) or DEFERRED]
         elif mode == "table":
-            body = _table(title, project_name, date)
+            body = _table(title, project_name, date, version=srs_version, revision_rows=revision_rows)
         elif mode == TECH_STACK:  # §7 — adopted-from-inputs stack, or two proposed options
             body = [tech_stack_markdown(tech_stack, tech_stack_selection)]
         elif mode == "placeholder":  # section genuinely empty for this release

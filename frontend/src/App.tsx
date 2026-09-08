@@ -9,6 +9,7 @@ import {
   deleteProject,
   downloadHandoffZip,
   getArtifact,
+  getChanges,
   getConfig,
   getCorpora,
   getFsList,
@@ -87,6 +88,7 @@ export function App() {
     void qc.invalidateQueries({ queryKey: ["reqs", pid] });
     void qc.invalidateQueries({ queryKey: ["gate", pid] });
     void qc.invalidateQueries({ queryKey: ["decisions", pid] });  // decisions depend on req state
+    void qc.invalidateQueries({ queryKey: ["changes", pid] });    // delta-vs-baseline depends on req state
     setSelected(new Set());
   };
 
@@ -130,6 +132,24 @@ export function App() {
     enabled: generating,
     refetchInterval: generating ? 1200 : false,
   });
+  // agile: has an SRS baseline been generated yet? drives the post-generation "revise" affordances
+  // (shares the ["changes", pid] cache with ChangesPanel; false until the first SRS exists).
+  const changesQ = useQuery({ queryKey: ["changes", pid], queryFn: () => getChanges(pid) });
+  const hasBaseline = changesQ.data?.has_baseline ?? false;
+  // the "revise requirements" section auto-opens ONCE when a baseline first appears, then respects
+  // the user's own collapse/expand (so it never fights a re-render that refetches the delta).
+  const [reqOpen, setReqOpen] = useState(false);
+  useEffect(() => { if (hasBaseline) setReqOpen(true); }, [hasBaseline]);
+  const reqSectionRef = useRef<HTMLDetailsElement>(null);
+  // "Revise" jumps to Review with the editable requirements list OPEN, UNFILTERED, and in view.
+  // The triage tabs (attention/review/routine) only show pending items, so once everything is
+  // approved they are empty — resetting the filter to "all" is what makes approved rows editable.
+  const goRevise = () => {
+    setFilter("all");
+    setReqOpen(true);
+    setPhase("review");
+    window.setTimeout(() => reqSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+  };
   useEffect(() => {
     const st = genStatus.data?.state;
     if (generating && (st === "done" || st === "error")) {
@@ -162,8 +182,10 @@ export function App() {
     if (filter === "all") return true;
     return isPending(r) && triageLevel(r) === filter;
   });
-  const selectable = visible.filter(isPending);
-  const allSelected = selectable.length > 0 && selectable.every((r) => selected.has(r.id));
+  // Every visible requirement can be selected for a bulk action — including approved ones, so a
+  // reviewer can bulk-reject requirements while revising (not only clear pending ones).
+  const selectableRows = visible;
+  const allSelected = selectableRows.length > 0 && selectableRows.every((r) => selected.has(r.id));
   const toggle = (id: string) =>
     setSelected((s) => {
       const n = new Set(s);
@@ -171,7 +193,7 @@ export function App() {
       return n;
     });
   const toggleAll = () =>
-    setSelected(allSelected ? new Set() : new Set(selectable.map((r) => r.id)));
+    setSelected(allSelected ? new Set() : new Set(selectableRows.map((r) => r.id)));
   const busy = review.isPending || bulk.isPending || autoAcc.isPending || acceptAllM.isPending;
 
   if (!entered) return <Landing onEnter={() => setEntered(true)} />;
@@ -346,6 +368,9 @@ export function App() {
           <p className="muted">No requirements yet — go back to <b>Input</b> and run the pipeline.</p>
         )}
 
+        {/* Agile: what changed since the last generated baseline (only shows after a first SRS) */}
+        {list.data && allReqs.length > 0 && <ChangesPanel pid={pid} />}
+
         {/* PRIMARY surface: review by DECISION (clustered, owner-routed, propose-don't-ask) */}
         {list.data && allReqs.length > 0 && <Decisions pid={pid} reqs={allReqs} onResolved={invalidate} />}
 
@@ -354,8 +379,11 @@ export function App() {
 
         {list.data && allReqs.length > 0 && (
           <>
-            <details className="reqdetail">
-              <summary>All requirements ({allReqs.length}) — detail &amp; manual override</summary>
+            <details className="reqdetail" ref={reqSectionRef} open={reqOpen}
+              onToggle={(e) => setReqOpen((e.target as HTMLDetailsElement).open)}>
+              <summary>{hasBaseline
+                ? `Revise requirements (${allReqs.length}) — edit any approved requirement; an edit re-opens it for a quick re-approval, then regenerate for the next SRS version`
+                : `All requirements (${allReqs.length}) — detail & manual override`}</summary>
             {/* triage toolbar: cut the manual work */}
             <div className="triage">
               <div className="tabs">
@@ -402,28 +430,34 @@ export function App() {
               </p>
             )}
 
-            <div className="tablewrap">
-            <table>
-              <thead>
-                <tr>
-                  <th><input type="checkbox" checked={allSelected} onChange={toggleAll} title="select all shown" /></th>
-                  <th>Requirement</th><th>Why flagged</th><th>Source quote</th><th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((r) => (
-                  <Row
-                    key={r.id}
-                    r={r}
-                    busy={busy}
-                    selected={selected.has(r.id)}
-                    selectable={isPending(r)}
-                    onToggle={() => toggle(r.id)}
-                    onReview={(action, edits) => review.mutate({ id: r.id, action, edits })}
-                  />
-                ))}
-              </tbody>
-            </table>
+            <div className="reqlist-bar">
+              <label className="selall">
+                <input type="checkbox" checked={allSelected} disabled={visible.length === 0} onChange={toggleAll} />
+                Select all shown
+              </label>
+              <span className="muted small">Showing {visible.length} of {allReqs.length}</span>
+            </div>
+            <div className="reqlist">
+              {visible.map((r) => (
+                <Row
+                  key={r.id}
+                  r={r}
+                  busy={busy}
+                  selected={selected.has(r.id)}
+                  selectable
+                  hasBaseline={hasBaseline}
+                  onToggle={() => toggle(r.id)}
+                  onReview={(action, edits) => review.mutate({ id: r.id, action, edits })}
+                />
+              ))}
+              {visible.length === 0 && (
+                <div className="reqempty muted">
+                  {filter === "all"
+                    ? "No requirements yet."
+                    : <>The “{filter}” tab only lists requirements still awaiting review — approved ones live under{" "}
+                        <button className="linklike" onClick={() => setFilter("all")}>All ({allReqs.length})</button>, where you can edit any of them.</>}
+                </div>
+              )}
             </div>
             </details>
 
@@ -479,6 +513,10 @@ export function App() {
       <section className="panel">
         <div className="reviewhead">
           <h2>4 · Generated documents</h2>
+          {genStatus.data?.state === "done" && (() => {
+            const v = (genStatus.data.manifest as { srs_version?: string } | undefined)?.srs_version;
+            return v ? <span className="ver-badge">SRS v{v}</span> : null;
+          })()}
           {genStatus.data?.state === "done" && (
             (genStatus.data.manifest as { traceability_complete?: boolean } | undefined)?.traceability_complete
               ? <span className="ok">{genStatus.data.count} approved requirement(s) · full traceability</span>
@@ -493,11 +531,28 @@ export function App() {
           })()}
         </div>
         {generate.isError && <p className="gate-blocked">{(generate.error as Error).message}</p>}
-        {genStatus.data && genStatus.data.state !== "done" && (
+        {genStatus.data?.state === "done" && (
+          <div className="revise-cta">
+            <div className="revise-cta-text">
+              <b>A requirement changed after this SRS?</b>
+              <p className="muted small">
+                Revise it in Review and regenerate — the SRS becomes a new version with the change recorded in
+                the Revision History, and unchanged requirements carry forward automatically. Editing an approved
+                requirement re-opens it for a quick re-approval first.
+              </p>
+            </div>
+            <button className="btn-primary" onClick={goRevise}>Revise requirements →</button>
+          </div>
+        )}
+        {genStatus.data && genStatus.data.state !== "done" && genStatus.data.state !== "error" && (
           <div className={`runstatus ${genStatus.data.state}`}>
             <span className="spinner" data-on={generating} /><b>Generation</b>
             <span className="muted">{genStatus.data.message}</span>
+            <p className="muted small genhint">Drafting the SRS prose with the LLM can take up to a minute. If the model is slow or unavailable it falls back automatically — this page updates on its own when it finishes.</p>
           </div>
+        )}
+        {genStatus.data?.state === "error" && (
+          <p className="gate-blocked">Generation failed: {genStatus.data.message}</p>
         )}
         {genStatus.data?.state === "done"
           ? <><Results pid={pid} /><AssetPicker pid={pid} /></>
@@ -839,71 +894,94 @@ function AssetPicker({ pid }: { pid: string }) {
 }
 
 function Row({
-  r, busy, selected, selectable, onToggle, onReview,
+  r, busy, selected, selectable, hasBaseline, onToggle, onReview,
 }: {
   r: Requirement;
   busy: boolean;
   selected: boolean;
   selectable: boolean;
+  hasBaseline: boolean;
   onToggle: () => void;
   onReview: (action: ReviewAction, edits?: Record<string, unknown>) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(r.statement);
+  const [showSrc, setShowSrc] = useState(false);
   const flags = r.quality.ambiguity_flags;
+  const conflicts = r.conflicts_with ?? [];
+  const warnCount = flags.length + conflicts.length;
+  const warnTitle = [...flags, ...(conflicts.length ? [`conflicts with ${conflicts.join(", ")}`] : [])].join("; ");
   useEffect(() => { if (!editing) setDraft(r.statement); }, [r.statement, editing]);
+  // editing an already-approved requirement that is in a frozen baseline re-opens it for
+  // re-approval (change-control), so the button must not claim it stays approved.
+  const willReReview = r.status === "approved" && hasBaseline;
+  const stmtChanged = draft.trim() !== r.statement.trim();
+  const lvl = r.triage?.level ?? "review";
 
   return (
-    <tr className={`status-${r.status}`}>
-      <td>{selectable && <input type="checkbox" checked={selected} onChange={onToggle} />}</td>
-      <td className="statement">
+    <div className={`reqcard status-${r.status}${selected ? " sel" : ""}`}>
+      {selectable && (
+        <input className="reqcheck" type="checkbox" checked={selected} onChange={onToggle}
+               title="select for a bulk action" />
+      )}
+      <div className="reqcard-body">
         {editing ? (
-          <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} />
+          <textarea className="reqedit" value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} autoFocus />
         ) : (
-          <>
-            <div className="stmt-text">
-              {r.statement}
-              {r.inferred && <span className="tag inferred">inferred</span>}
-            </div>
-            <div className="stmt-meta">
-              <span className={`badge ${r.status}`}>{r.status}</span>
-              <span className="tag">{r.rtype}</span>
-              {r.priority && <span className={`tag prio-${r.priority}`}>{r.priority}</span>}
-              <span className={`badge triage-${r.triage?.level ?? "review"}`}
-                    title={(r.triage?.reasons ?? []).join("; ") || "clear, grounded, high-confidence"}>
-                {r.triage?.level ?? "review"}
-              </span>
-              {r.conflicts_with?.length > 0 && (
-                <span className="tag flag" title={`conflicts with ${r.conflicts_with.join(", ")}`}>conflict</span>
-              )}
-              {flags.map((f) => <span key={f} className="tag flag">{f}</span>)}
-            </div>
-          </>
+          <div className="reqcard-stmt">
+            {r.statement}
+            {r.inferred && <span className="tag inferred">inferred</span>}
+          </div>
         )}
-      </td>
-      <td className="why muted">{(r.triage?.reasons ?? []).join("; ") || "—"}</td>
-      <td className="quotes">
-        {r.sources.map((s, i) => (
-          <blockquote key={i} title={`${s.doc_id} · ${s.location}`}>“{s.quote}”</blockquote>
-        ))}
-      </td>
-      <td className="actions">
+        <div className="reqcard-meta">
+          <span className={`tdot ${lvl}`}
+                title={`triage: ${lvl} — ${(r.triage?.reasons ?? []).join("; ") || "clear, grounded, high-confidence"}`} />
+          <span className={`badge ${r.status}`}>{r.status.replace(/_/g, " ")}</span>
+          <span className="chip">{r.rtype.replace(/_/g, " ")}</span>
+          {r.priority && <span className={`chip prio-${r.priority}`}>{r.priority}</span>}
+          {warnCount > 0 && (
+            <span className="chip warn" title={warnTitle}>⚠ {warnCount} flag{warnCount > 1 ? "s" : ""}</span>
+          )}
+          {r.sources.length > 0 && (
+            <button className="src-toggle" onClick={() => setShowSrc((v) => !v)}>
+              {showSrc ? "Hide source" : `Source (${r.sources.length})`}
+            </button>
+          )}
+        </div>
+        {showSrc && r.sources.length > 0 && (
+          <div className="reqcard-src">
+            {r.sources.map((s, i) => (
+              <blockquote key={i} title={`${s.doc_id} · ${s.location}`}>“{s.quote}”</blockquote>
+            ))}
+          </div>
+        )}
+        {editing && willReReview && stmtChanged && (
+          <p className="muted small reopen-hint">Changing an approved requirement re-opens it for re-approval before the next SRS.</p>
+        )}
+      </div>
+      <div className="reqcard-actions">
         {editing ? (
           <>
             <button className="btn-primary sm" disabled={busy || !draft.trim()} onClick={() => { onReview("edit", { statement: draft }); setEditing(false); }}>
-              Save &amp; approve
+              {willReReview && stmtChanged ? "Save (needs re-approval)" : "Save & approve"}
             </button>
             <button className="ghost" onClick={() => { setDraft(r.statement); setEditing(false); }}>Cancel</button>
           </>
         ) : (
           <>
-            <button className="btn-primary sm" disabled={busy} onClick={() => onReview("accept")}>Accept</button>
+            {r.status !== "approved" && (
+              <button className="btn-primary sm" disabled={busy} onClick={() => onReview("accept")}>
+                {r.status === "rejected" ? "Restore" : "Accept"}
+              </button>
+            )}
             <button disabled={busy} className="ghost" onClick={() => setEditing(true)}>Edit</button>
-            <button disabled={busy} className="danger" onClick={() => onReview("reject")}>Reject</button>
+            {r.status !== "rejected" && (
+              <button disabled={busy} className="danger" onClick={() => onReview("reject")}>Reject</button>
+            )}
           </>
         )}
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 }
 
@@ -916,6 +994,63 @@ const KIND_LABEL: Record<string, string> = {
 const recommendsExclude = (d: Decision) => /exclude|defer|out of scope|drop/i.test(d.recommended);
 // the suggested requirement text for gap/possible-miss decisions (strip the "…: " prefix)
 const suggestionText = (d: Decision) => (d.evidence[0] ?? d.question).replace(/^[^:]{3,40}:\s*/, "").trim();
+
+// Agile: the delta of the current approved set vs the last generated baseline (added / modified /
+// removed). Only appears once a baseline exists — i.e. after the first SRS has been generated.
+function ChangesPanel({ pid }: { pid: string }) {
+  const q = useQuery({ queryKey: ["changes", pid], queryFn: () => getChanges(pid) });
+  const d = q.data;
+  if (!d || !d.has_baseline) return null;
+  // The delta is computed against the APPROVED set, so it is only meaningful once review is complete
+  // (nothing pending). Mid-review — e.g. right after a fresh run, with requirements still `candidate`
+  // — un-reviewed items would misread as "removed", so hold the delta and explain why.
+  if (!d.review_complete) {
+    return (
+      <div className="changes">
+        <div className="reviewhead"><h3>Changes since Baseline v{d.baseline_version}</h3></div>
+        <p className="muted small">Finish reviewing the requirements below — once nothing is left pending, the
+          changes for the next SRS version (vs Baseline v{d.baseline_version}) appear here.</p>
+      </div>
+    );
+  }
+  const s = d.summary;
+  return (
+    <div className="changes">
+      <div className="reviewhead">
+        <h3>Changes since Baseline v{d.baseline_version}</h3>
+        <span className="counts">{s.added} added · {s.modified} modified · {s.removed} removed · {d.unchanged} unchanged</span>
+      </div>
+      {d.total_changes === 0 ? (
+        <p className="muted small">No changes since the last SRS — regenerating produces the same requirements.</p>
+      ) : (
+        <>
+          <p className="muted small">
+            These land in the next SRS version when you generate; unchanged approved requirements are carried forward automatically.
+          </p>
+          {d.added.map((c) => (
+            <div key={c.id} className="chg">
+              <div className="chg-head"><span className="chg-tag add">NEW</span><b>{c.srs_id}</b></div>
+              <div className="chg-line add">+ {c.statement}</div>
+            </div>
+          ))}
+          {d.modified.map((c) => (
+            <div key={c.id} className="chg">
+              <div className="chg-head"><span className="chg-tag mod">MODIFIED</span><b>{c.srs_id}</b></div>
+              <div className="chg-line del">− {c.before}</div>
+              <div className="chg-line add">+ {c.statement}</div>
+            </div>
+          ))}
+          {d.removed.map((c) => (
+            <div key={c.id} className="chg">
+              <div className="chg-head"><span className="chg-tag rem">REMOVED</span><b>{c.srs_id}</b></div>
+              <div className="chg-line rem">~ {c.statement}</div>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
 
 function Decisions({ pid, reqs, onResolved }: { pid: string; reqs: Requirement[]; onResolved: () => void }) {
   const qc = useQueryClient();

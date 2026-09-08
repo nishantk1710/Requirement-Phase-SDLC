@@ -1,4 +1,4 @@
-![1787121366842](image/README/1787121366842.png)![1787121377548](image/README/1787121377548.png)![1787121381298](image/README/1787121381298.png) Recondensation and along the left disturbance meet home pulling last school grammar and wid bottle medicine problems screenare places forit came shit scratch to open target schools tracker URLet of human browser and shut session session cap to# RGA — Agentic Requirement Gathering & Analysis
+![1787121366842](image/README/1787121366842.png)![1787121377548](image/README/1787121377548.png)![1787121381298](image/README/1787121381298.png) Recondensation and along the left disturbance meet home pulling last school grammar and wid bottle medicine problems screenare places forit came shit scratch to open target schools tracker URLet of human browser and shut session session cap to![1788785809376](image/README/1788785809376.png)# RGA — Agentic Requirement Gathering & Analysis
 
 RGA is an agentic pipeline that turns raw, messy project inputs (BRDs, discovery-call transcripts,
 email threads, product backlogs, ops intake forms) into a **human-reviewed, evidence-traceable
@@ -291,7 +291,7 @@ python -m rga store --project P1 --provider foundry     # extract + persist (pop
 python -m rga generate --project P1 --provider foundry  # build the handoff pack from approved reqs
 python -m rga eval --split test --provider foundry       # extract + score against the gold set
 python -m rga validate-srs handoff/P1/SRS.docx           # check an SRS against the Design-parser format schema
-```
+```![1788844474917](image/README/1788844474917.png)![1788845411026](image/README/1788845411026.png)![1788845533495](image/README/1788845533495.png)
 
 The **format validator** (`validate-srs`) checks a generated SRS (`.docx` or `.md`) against the
 reference schema in `backend/rga/generate/srs_format_schema.json` — the contract the Design team's

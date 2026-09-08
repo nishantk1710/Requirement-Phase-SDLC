@@ -74,6 +74,8 @@ def generate_handoff(
     tech_stack_selection: dict | None = None,   # aspect key -> chosen candidate name
     strict_format: bool = False,                 # True -> raise FormatInvalid if the SRS fails the schema
     brand: str | dict | None = "zensar",         # org brand for §3.1 design tokens (None -> derived palette)
+    srs_version: str | None = None,              # title-page version (default "1.0") — set by the baseline flow
+    revision_rows: list[dict] | None = None,     # SRS Revision History rows from the project's baselines
 ) -> dict:
     """Compose the handoff pack. Raises `GateNotOpen` if the gate is closed.
 
@@ -116,6 +118,8 @@ def generate_handoff(
         tech_stack=tech_stack,
         tech_stack_selection=tech_stack_selection,
         design_tokens=design,
+        srs_version=srs_version,
+        revision_rows=revision_rows,
     )
     # Format-conformance gate: the assembled SRS MUST match the Design-parser reference schema.
     # Deterministic check (no LLM). Recorded in the manifest; loud on failure; hard-fails if strict.

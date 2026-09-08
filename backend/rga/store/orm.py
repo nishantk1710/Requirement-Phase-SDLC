@@ -112,6 +112,22 @@ class AgentRunRow(Base):
     ts: Mapped[datetime] = mapped_column(DateTime)
 
 
+class BaselineRow(Base):
+    """A frozen snapshot of the APPROVED requirement set at the moment an SRS was generated — the
+    versioned baseline of an iteration. `snapshot` is a compact JSON list of the approved items
+    ({id, srs_id, statement, rtype, feature, priority, section}); the delta view diffs the live set
+    against the latest baseline, and the SRS Revision History is built from these rows. Additive:
+    the sequential first-pass flow simply creates baseline v1 on its first generate."""
+    __tablename__ = "baselines"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_id: Mapped[str] = mapped_column(String, index=True)
+    version: Mapped[int] = mapped_column(Integer)          # 1, 2, 3, … per project
+    reason: Mapped[str] = mapped_column(Text, default="")  # e.g. "Initial draft" / "2 added, 1 modified"
+    snapshot: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
 class ChunkRow(Base):
     __tablename__ = "chunks"
 

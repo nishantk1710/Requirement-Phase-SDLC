@@ -157,8 +157,11 @@ def draft_narrative(
         "not one combined paragraph."
     )
     try:
+        # Best-effort prose: bound the budget so a stalling provider falls back to TBD FAST
+        # (≤ ~90s worst case) instead of grinding through the full default retry budget.
         result = provider.structured(
-            NARRATIVE_SYSTEM, user, NarrativeSections, max_tokens=NARRATIVE_MAX_TOKENS
+            NARRATIVE_SYSTEM, user, NarrativeSections, max_tokens=NARRATIVE_MAX_TOKENS,
+            timeout_s=45.0, max_attempts=2,
         )
     except Exception as exc:  # best-effort: never block SRS/RTM generation on the prose step
         log.warning("narrative drafting failed (%s); prose sections will render as TBD", exc)

@@ -146,6 +146,22 @@ export const getArtifact = async (pid: string, name: string): Promise<string> =>
   return text;
 };
 
+// --- agile: changes since baseline -----------------------------------------
+export interface ChangeItem { id: string; srs_id: string; statement: string; before?: string }
+export interface ChangesResult {
+  has_baseline: boolean;
+  review_complete: boolean;   // delta is final only when the review gate is open (nothing pending)
+  baseline_version: number;
+  added: ChangeItem[];
+  modified: ChangeItem[];
+  removed: ChangeItem[];
+  unchanged: number;
+  total_changes: number;
+  summary: { added: number; modified: number; removed: number; unchanged: number };
+}
+export const getChanges = (pid: string): Promise<ChangesResult> =>
+  fetch(`/api/projects/${pid}/changes`).then(unwrap<ChangesResult>);
+
 // --- local file browser + handoff ZIP --------------------------------------
 // The backend runs on the user's machine, so we browse the LOCAL filesystem and select files by
 // path (no browser upload — some orgs block that). The backend reads the chosen files off disk.

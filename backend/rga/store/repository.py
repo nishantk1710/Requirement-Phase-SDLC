@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import selectinload
 
 from ..models import (
@@ -27,6 +27,7 @@ from ..models import (
 from .db import Database
 from .orm import (
     AgentRunRow,
+    BaselineRow,
     ChunkRow,
     DecisionResolutionRow,
     ProjectRow,
@@ -206,6 +207,61 @@ class Repository:
                 )
             )
             return {d for (d,) in res.all()}
+
+    # --- baselines (versioned snapshots for the agile / iteration loop) -------
+    async def save_baseline(self, project_id: str, version: int, reason: str,
+                            snapshot: list[dict]) -> None:
+        """Freeze the approved set as baseline `version` for this project (one row per version).
+
+        Stored in LOCAL time so the Revision History date (`created_at[:10]`) lines up with the
+        generation date (`datetime.date.today()`), instead of a UTC/local off-by-one near midnight."""
+        async with self.db.session() as s:
+            async with s.begin():
+                s.add(BaselineRow(project_id=project_id, version=version, reason=reason,
+                                  snapshot=snapshot, created_at=datetime.now()))
+
+    async def refresh_baseline(self, project_id: str, version: int, snapshot: list[dict]) -> None:
+        """Refresh an existing baseline's snapshot in place, keeping its version/reason/date.
+
+        Used when the SRS is regenerated with no requirement changes: the version does NOT advance
+        (no pointless new revision), but the stored snapshot is kept current with the approved set."""
+        async with self.db.session() as s:
+            async with s.begin():
+                await s.execute(
+                    update(BaselineRow)
+                    .where(BaselineRow.project_id == project_id, BaselineRow.version == version)
+                    .values(snapshot=snapshot)
+                )
+
+    async def latest_baseline(self, project_id: str) -> dict | None:
+        """The most recent baseline (with its snapshot) for a project, or None if none exist."""
+        async with self.db.session() as s:
+            res = await s.execute(
+                select(BaselineRow).where(BaselineRow.project_id == project_id)
+                .order_by(BaselineRow.version.desc()).limit(1)
+            )
+            b = res.scalars().first()
+            if b is None:
+                return None
+            return {"version": b.version, "reason": b.reason, "snapshot": b.snapshot or [],
+                    "created_at": b.created_at.isoformat()}
+
+    async def list_baselines(self, project_id: str) -> list[dict]:
+        """All baselines for a project, oldest first (drives the SRS Revision History)."""
+        async with self.db.session() as s:
+            res = await s.execute(
+                select(BaselineRow).where(BaselineRow.project_id == project_id)
+                .order_by(BaselineRow.version)
+            )
+            return [{"version": b.version, "reason": b.reason,
+                     "created_at": b.created_at.isoformat(), "count": len(b.snapshot or [])}
+                    for b in res.scalars().all()]
+
+    async def delete_baselines(self, project_id: str) -> None:
+        """Drop a project's baselines (used when the project itself is deleted)."""
+        async with self.db.session() as s:
+            async with s.begin():
+                await s.execute(delete(BaselineRow).where(BaselineRow.project_id == project_id))
 
     async def list_decision_resolutions(self, project_id: str) -> list[dict]:
         """The full resolution log for a project (audit)."""
