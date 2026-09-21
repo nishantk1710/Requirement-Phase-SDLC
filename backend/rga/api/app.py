@@ -89,6 +89,13 @@ class AddReqBody(BaseModel):
     statement: str
     rtype: str = "functional"
     reason: str = ""  # where it came from (e.g. "Coverage gap" / "Possible miss")
+    feature: str | None = None    # optional: slot a functional requirement into an SRS §4 feature group
+    priority: str | None = None   # optional: must | should | could | wont (else auto-derived)
+    nfr_category: str | None = None   # optional (non-functional): performance | safety | security | … (SRS §5.x)
+
+
+class CodebaseBody(BaseModel):
+    path: str  # local directory of the existing codebase to scan
 
 
 class ResolveBody(BaseModel):
@@ -280,10 +287,14 @@ def create_app(
             # §7 technology stack — adopt a source-stated stack, else propose two options with a
             # recommendation. Stored on the run so the review screen can show it and the SRS §7 is
             # rebuilt from it. Off the event loop (LLM); deterministic fallback when no provider.
-            from ..agents.techstack import analyze_tech_stack
-            progress("analyzing", "Determining the technology stack (adopt from inputs or propose options)…")
-            tech_stack = await asyncio.to_thread(
-                analyze_tech_stack, provider, reqs, chunks, project_name=pid.strip())
+            # SKIPPED for BROWNFIELD (an existing codebase is attached): the stack is already defined
+            # and implemented in the source, so we neither infer it nor offer stack options.
+            tech_stack = None
+            if await repo.get_codebase(pid) is None:
+                from ..agents.techstack import analyze_tech_stack
+                progress("analyzing", "Determining the technology stack (adopt from inputs or propose options)…")
+                tech_stack = await asyncio.to_thread(
+                    analyze_tech_stack, provider, reqs, chunks, project_name=pid.strip())
 
             # persist the analysed requirements
             progress("analyzing", f"Saving {len(reqs)} analysed requirements…", n_extracted=len(reqs))
@@ -310,7 +321,8 @@ def create_app(
                 status="success", input={"chunks": n_chunks},
                 output={"accepted": len(reqs), "open_questions_count": len(open_q),
                         "open_questions": open_q, "conflicts": len(conflicts),
-                        "auto_approved_ids": auto_ids, "tech_stack": tech_stack.model_dump()},
+                        "auto_approved_ids": auto_ids,
+                        "tech_stack": tech_stack.model_dump() if tech_stack else None},
             ))
 
             cnts = counts(await repo.list_requirements(pid))
@@ -390,6 +402,141 @@ def create_app(
     async def baselines(pid: str) -> dict:
         """The project's baseline history (version + reason + date) — the SRS Revision History."""
         return {"baselines": await repo.list_baselines(pid)}
+
+    # ---- brownfield: attach an existing codebase + generate a change pack -----
+    def _register_codebase_doc(pid: str, index: dict, understanding: dict) -> tuple[str, str]:
+        """Synthesize an ENHANCEMENT-REQUIREMENTS PDF from the analyzed codebase (NEW requirements,
+        distinct from the raw source) and register it as this project's corpus, so the normal
+        pipeline extracts requirements from it. Returns (corpus_path, doc_name)."""
+        import shutil
+
+        from ..codebase.document import synthesize_requirements, write_requirements_pdf
+
+        base = Path(uploads_root) / safe_dir_component(pid)
+        docs_dir = base / "docs"
+        # In existing-codebase mode the ONLY input is the generated PDF — clear any leftover docs
+        # (e.g. a zip the user uploaded earlier as a document) so nothing else is treated as input.
+        if docs_dir.exists():
+            shutil.rmtree(docs_dir)
+        docs_dir.mkdir(parents=True, exist_ok=True)
+        name = "Enhancement_Requirements.pdf"   # generic, not project-specific
+        features = synthesize_requirements(index, understanding, project_name=pid.strip(), provider=provider)
+        write_requirements_pdf(pid.strip(), understanding, features, docs_dir / name)
+        manifest = {"domain": pid, "docs": [{"doc_id": Path(name).stem, "source_type": "brd",
+                                             "file": f"docs/{name}"}]}
+        (base / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        return base.as_posix(), name
+
+    @app.get("/api/projects/{pid}/codebase")
+    async def get_codebase(pid: str) -> dict:
+        """The attached existing codebase's understanding (capability map + summary), or
+        `attached: False` for a greenfield project."""
+        cb = await repo.get_codebase(pid)
+        if cb is None:
+            return {"attached": False}
+        corpus = (Path(uploads_root) / safe_dir_component(pid)).as_posix()
+        return {"attached": True, "root": cb["root"], "corpus": corpus, "created_at": cb["created_at"],
+                **cb["understanding"]}
+
+    @app.post("/api/projects/{pid}/codebase")
+    async def attach_codebase(pid: str, body: CodebaseBody) -> dict:
+        """Scan + understand a local source tree and attach it to this project (makes it brownfield).
+        Deterministic scan; the summary is LLM-refined when a provider is configured."""
+        from ..codebase import scan_codebase, understand_codebase
+
+        path = (body.path or "").strip()
+        if not path:
+            raise HTTPException(status_code=400, detail="path is required")
+        try:
+            index = await asyncio.to_thread(scan_codebase, path)
+        except NotADirectoryError:
+            raise HTTPException(status_code=400, detail=f"not a directory: {path}")
+        except OSError as exc:
+            raise HTTPException(status_code=400, detail=f"cannot read path: {exc}")
+        if index["n_files"] == 0:
+            raise HTTPException(status_code=400, detail="no recognised source files under that path")
+        understanding = await asyncio.to_thread(understand_codebase, index, provider=provider)
+        await repo.save_codebase(pid, index["root"], index, understanding)
+        corpus, doc_name = await asyncio.to_thread(_register_codebase_doc, pid, index, understanding)
+        return {"attached": True, "root": index["root"], "corpus": corpus, "doc": doc_name,
+                **understanding}
+
+    @app.post("/api/projects/{pid}/codebase-zip")
+    async def attach_codebase_zip(pid: str, file: UploadFile = File(...)) -> dict:
+        """Attach an existing codebase from an uploaded .zip — extracted (zip-slip safe) under the
+        project's uploads dir, then scanned + understood exactly like a local-path attach."""
+        import zipfile
+
+        from ..codebase import scan_codebase, understand_codebase
+        from ..codebase.scan import extract_zip
+
+        base = Path(uploads_root) / safe_dir_component(pid)
+        base.mkdir(parents=True, exist_ok=True)
+        zip_path = base / "codebase.zip"
+        zip_path.write_bytes(await file.read())
+        try:
+            root = await asyncio.to_thread(extract_zip, zip_path, base / "codebase")
+        except (zipfile.BadZipFile, ValueError, OSError) as exc:
+            raise HTTPException(status_code=400, detail=f"could not extract zip: {exc}")
+        index = await asyncio.to_thread(scan_codebase, root)
+        if index["n_files"] == 0:
+            raise HTTPException(status_code=400, detail="no recognised source files in the zip")
+        understanding = await asyncio.to_thread(understand_codebase, index, provider=provider)
+        await repo.save_codebase(pid, index["root"], index, understanding)
+        corpus, doc_name = await asyncio.to_thread(_register_codebase_doc, pid, index, understanding)
+        return {"attached": True, "root": index["root"], "corpus": corpus, "doc": doc_name,
+                **understanding}
+
+    @app.post("/api/projects/{pid}/change-pack")
+    async def change_pack(pid: str) -> dict:
+        """Generate the brownfield CHANGE pack — a change-only SRS + RTM of the approved requirements
+        to implement in the existing system, grounded in the attached codebase (impact analysis)."""
+        from ..generate.change_pack import NoChangeRequirements, generate_change_pack
+        from ..review.changes import compute_changes
+
+        reqs = await repo.list_requirements(pid)
+        cb = await repo.get_codebase(pid)
+        index = cb["index"] if cb else None
+        understanding = cb["understanding"] if cb else None
+        # Scope the change pack to the ACTUAL changes: if a baseline exists, document only the
+        # added/modified requirements since it (the same delta the Changes panel shows) — not the
+        # whole approved spec. A fresh brownfield project (no baseline) documents all approved.
+        prev = await repo.latest_baseline(pid)
+        change_ids = None
+        if prev is not None:
+            delta = compute_changes(reqs, prev["snapshot"])
+            change_ids = {c["id"] for c in delta["added"]} | {c["id"] for c in delta["modified"]}
+        today = datetime.date.today().isoformat()
+        try:
+            pack = await asyncio.to_thread(
+                generate_change_pack, reqs, project_name=pid.strip(), date=today,
+                understanding=understanding, index=index, change_ids=change_ids,
+            )
+        except NoChangeRequirements as exc:
+            detail = str(exc)
+            if change_ids is not None and not change_ids:
+                detail = ("no requirement changes since the last SRS baseline — add or edit "
+                          "requirements, then regenerate the change pack")
+            raise HTTPException(status_code=400, detail=detail)
+        files = {
+            "CHANGE_SRS.md": pack["change_srs_markdown"],
+            "CHANGE_RTM.csv": pack["change_rtm_csv"],
+            "change-manifest.json": json.dumps(pack["manifest"], indent=2),
+        }
+        outdir = Path("handoff") / safe_dir_component(pid)
+        outdir.mkdir(parents=True, exist_ok=True)
+        for name, content in files.items():
+            (outdir / name).write_text(content, encoding="utf-8")
+        # also emit a Word .docx of the change SRS (best-effort; never breaks the .md)
+        from ..generate.docx_export import write_docx_versions
+
+        docx_names = await asyncio.to_thread(
+            write_docx_versions, outdir, {"CHANGE_SRS.md": pack["change_srs_markdown"]})
+        # merge into in-memory artifacts so the existing artifact endpoint serves them (disk is the
+        # durable fallback, so a later greenfield generate that overwrites the map can't lose them)
+        app.state.artifacts.setdefault(pid, {}).update(files)
+        return {"generated": True, "files": list(files.keys()) + docx_names,
+                "manifest": pack["manifest"]}
 
     @app.get("/api/projects/{pid}/decisions")
     async def decisions(pid: str) -> dict:
@@ -513,22 +660,32 @@ def create_app(
         import hashlib
 
         from ..agents.prioritize import prioritize
-        from ..models import RType, SourceRef
+        from ..models import Priority, RType, SourceRef
 
         stmt = body.statement.strip()
         if not stmt:
             raise HTTPException(status_code=400, detail="statement is required")
         rtype = body.rtype if body.rtype in {t.value for t in RType} else "functional"
         rid = "HU-" + hashlib.sha1((stmt + pid).encode("utf-8")).hexdigest()[:8]
+        # a feature only groups FUNCTIONAL requirements (SRS §4); honour an explicit choice, else the
+        # generic "Added during review" bucket. NFR/BR/constraint/assumption carry no feature.
+        feature = ((body.feature or "").strip() or "Added during review") if rtype == "functional" else None
+        # NFR category only applies to non-functional requirements (drives the SRS §5.x subsection);
+        # an unknown/blank value falls through to §5.4 Software Quality Attributes in the assembler.
+        nfr_category = (body.nfr_category or "").strip() or None if rtype == "non_functional" else None
         r = Requirement(
             id=rid, project_id=pid, statement=stmt, rtype=RType(rtype),
-            feature="Added during review" if rtype == "functional" else None,
+            feature=feature, nfr_category=nfr_category,
             status=Status.approved, confidence=1.0,
             source_refs=[SourceRef(doc_id="human", source_type="analysis",
                                    location=body.reason or "Added during review", raw_quote=stmt)],
             provenance={"agent": "human", "added_in_review": True, "reason": body.reason},
         )
-        r.priority, _ = prioritize(stmt, r.rtype, inferred=False)
+        # priority: honour an explicit valid MoSCoW choice, else auto-derive from the statement
+        if body.priority in {p.value for p in Priority}:
+            r.priority = Priority(body.priority)
+        else:
+            r.priority, _ = prioritize(stmt, r.rtype, inferred=False)
         await repo.save_requirement(r)
         return {"added": True, "id": rid}
 
@@ -805,6 +962,7 @@ def create_app(
         """Clear ALL data for one project (requirements, chunks, decisions, runs, baselines)."""
         removed = await repo.delete_project(pid)
         await repo.delete_baselines(pid)
+        await repo.delete_codebase(pid)
         app.state.jobs.pop(pid, None)
         app.state.artifacts.pop(pid, None)
         return {"deleted": True, "project": pid, "requirements_removed": removed}

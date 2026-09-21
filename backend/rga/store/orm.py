@@ -128,6 +128,20 @@ class BaselineRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime)
 
 
+class CodebaseRow(Base):
+    """A scanned + understood EXISTING codebase attached to a (brownfield) project — one row per
+    project (upserted on re-scan). `index` is the compact CodeIndex (files/languages/symbols) and
+    `understanding` the derived capability map + summary. A project with a row here is brownfield;
+    the change pack uses it for the Existing-System Overview and impact analysis. Additive table."""
+    __tablename__ = "codebases"
+
+    project_id: Mapped[str] = mapped_column(String, primary_key=True)
+    root: Mapped[str] = mapped_column(Text, default="")           # the scanned directory path
+    index: Mapped[dict] = mapped_column(JSON, default=dict)       # CodeIndex (scan.py)
+    understanding: Mapped[dict] = mapped_column(JSON, default=dict)  # capability map + summary
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
 class ChunkRow(Base):
     __tablename__ = "chunks"
 

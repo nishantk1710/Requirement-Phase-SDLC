@@ -148,6 +148,43 @@ async def test_changes_endpoint_holds_delta_until_review_complete(client, repo):
     assert j2["review_complete"] is True
 
 
+@pytest.mark.asyncio
+async def test_add_requirement_endpoint_honours_feature_and_priority(client, repo):
+    r = await client.post("/api/projects/P-BL/requirements", json={
+        "statement": "The system shall export an audit log.",
+        "rtype": "functional", "feature": "Auditing", "priority": "should"})
+    assert r.status_code == 200
+    j = r.json()
+    assert j["added"] is True and j["id"].startswith("HU-")
+    added = next(x for x in await repo.list_requirements("P-BL") if x.id == j["id"])
+    assert added.status == Status.approved                    # human-authored -> created approved
+    assert added.feature == "Auditing" and added.priority.value == "should"
+
+
+@pytest.mark.asyncio
+async def test_add_non_functional_requirement_files_by_category(client, repo):
+    r = await client.post("/api/projects/P-BL/requirements", json={
+        "statement": "The system shall encrypt customer data at rest.",
+        "rtype": "non_functional", "nfr_category": "security"})
+    assert r.status_code == 200
+    added = next(x for x in await repo.list_requirements("P-BL") if x.id == r.json()["id"])
+    assert added.rtype.value == "non_functional" and added.nfr_category == "security"
+    assert added.feature is None                              # NFRs are not grouped by feature
+
+
+@pytest.mark.asyncio
+async def test_added_requirement_shows_as_new_in_delta(client, repo):
+    await repo.save_requirement(_r("a", "The system shall log in.", pid="P-BL"))
+    await repo.save_baseline("P-BL", 1, "Initial draft",
+                             snapshot_approved([_r("a", "The system shall log in.")]))
+    r = await client.post("/api/projects/P-BL/requirements",
+                          json={"statement": "The system shall export an audit log."})
+    assert r.status_code == 200
+    j = (await client.get("/api/projects/P-BL/changes")).json()
+    assert j["review_complete"] is True and j["summary"]["added"] == 1
+    assert j["added"][0]["statement"].startswith("The system shall export")
+
+
 async def _wait_generate(client, pid, timeout=20.0):
     for _ in range(int(timeout / 0.1)):
         st = (await client.get(f"/api/projects/{pid}/generate-status")).json()

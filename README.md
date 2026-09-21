@@ -102,7 +102,7 @@ decision surface in **Appendix C**, never silently dropped.
 
 ## 3. End-to-end system flow
 
-The UI has four phases; each maps to backend endpoints. The pipeline itself is a sequence of agents.
+The UI has four phases; each mapssj to backend endpoints. The pipeline itself is a sequence of agents.
 
 ```
  ┌── Phase 1 · INPUT ─────────────────────────────────────────────────────────┐

@@ -396,7 +396,48 @@ header.topbar .brand { cursor: pointer; }
   margin: 6px 2px 12px; flex-wrap: wrap; }
 .selall { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted);
   cursor: pointer; user-select: none; }
+.reqlist-bar-right { display: inline-flex; align-items: center; gap: 12px; }
+.addreq-btn { flex: none; }
 .reqlist { display: flex; flex-direction: column; gap: 8px; }
+/* inline "add a new requirement" form */
+.addreq-card { border: 1px solid var(--accent); border-left: 3px solid var(--accent); border-radius: 12px;
+  background: var(--panel); padding: 14px; margin: 0 0 10px; display: flex; flex-direction: column; gap: 10px; }
+.addreq-fields { display: flex; flex-wrap: wrap; gap: 14px; }
+.addreq-fields label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.addreq-fields select, .addreq-fields input { font: inherit; padding: 6px 8px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--bg); color: var(--text); min-width: 150px; }
+.addreq-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* brownfield: existing-codebase panel */
+.codebase-panel > summary { color: var(--accent-ink); font-weight: 600; }
+.cb-attach-row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+.cb-attach-row input { flex: 1; min-width: 260px; font: inherit; padding: 7px 10px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); }
+.cb-attached { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
+.cb-attached code { font-family: var(--mono); font-size: 12px; }
+.cb-caps { font-size: 12.5px; }
+.cb-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 14px 0 4px; }
+.cb-results { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+.cb-zip-btn { position: relative; cursor: pointer; flex: none; display: inline-flex; align-items: center; }
+/* mode picker (fresh vs existing codebase) */
+.modepick { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 4px 0 20px; }
+.modecard { text-align: left; display: flex; flex-direction: column; gap: 5px; padding: 14px 16px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--panel); cursor: pointer;
+  transition: border-color .12s, box-shadow .12s, background .12s; }
+.modecard:hover { border-color: var(--border-strong, #cbd2dc); }
+/* selected: override the global `button.on { color:#fff }` — the card bg is a LIGHT tint, so white
+   text would be invisible; use the dark-on-tint accent ink (the badge/chip pairing). */
+.modecard.on { border-color: var(--accent); background: var(--accent-tint);
+  box-shadow: 0 0 0 1px var(--accent) inset; color: var(--accent-ink); }
+.modecard b { font-size: 15px; color: var(--text); }
+.modecard.on b { color: var(--accent-ink); }
+.modecard span { font-size: 12.5px; color: var(--muted); }
+@media (max-width: 640px) { .modepick { grid-template-columns: 1fr; } }
+/* input-phase steps for the existing-codebase mode */
+.cb-step { margin: 8px 0 18px; padding: 14px 16px; border: 1px solid var(--border);
+  border-left: 3px solid var(--accent); border-radius: 12px; background: var(--panel); }
+.cb-step h3, .cb-step-h { margin: 0 0 6px; font-size: 15px; }
+.cb-step-h { margin: 18px 0 6px; }
+.cb-attach-card { margin-top: 8px; }
 .reqcard { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px;
   border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 12px;
   background: var(--panel); transition: border-color .12s ease, background .12s ease, box-shadow .12s ease; }

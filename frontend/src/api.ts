@@ -162,6 +162,40 @@ export interface ChangesResult {
 export const getChanges = (pid: string): Promise<ChangesResult> =>
   fetch(`/api/projects/${pid}/changes`).then(unwrap<ChangesResult>);
 
+// --- brownfield: attach an existing codebase + generate a change-only pack --
+export interface CodebaseCapability { module: string; files: number; loc: number; language: string; key_symbols: string[]; }
+export interface CodebaseInfo {
+  attached: boolean;
+  root?: string;
+  corpus?: string;   // the synthetic-requirements corpus registered from the codebase analysis
+  doc?: string;      // the generated document filename
+  summary?: string;
+  capabilities?: CodebaseCapability[];
+  languages?: Record<string, number>;
+  n_files?: number;
+  truncated?: boolean;
+  created_at?: string;
+}
+export const getCodebase = (pid: string): Promise<CodebaseInfo> =>
+  fetch(`/api/projects/${pid}/codebase`).then(unwrap<CodebaseInfo>);
+
+export const attachCodebase = (pid: string, path: string): Promise<CodebaseInfo> =>
+  fetch(`/api/projects/${pid}/codebase`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path }),
+  }).then(unwrap<CodebaseInfo>);
+
+export const attachCodebaseZip = (pid: string, file: File): Promise<CodebaseInfo> => {
+  const fd = new FormData();
+  fd.append("file", file);
+  return fetch(`/api/projects/${pid}/codebase-zip`, { method: "POST", body: fd }).then(unwrap<CodebaseInfo>);
+};
+
+export const generateChangePack = (pid: string): Promise<{ generated: boolean; files: string[]; manifest: Record<string, unknown> }> =>
+  fetch(`/api/projects/${pid}/change-pack`, { method: "POST" })
+    .then(unwrap<{ generated: boolean; files: string[]; manifest: Record<string, unknown> }>);
+
 // --- local file browser + handoff ZIP --------------------------------------
 // The backend runs on the user's machine, so we browse the LOCAL filesystem and select files by
 // path (no browser upload — some orgs block that). The backend reads the chosen files off disk.
@@ -248,11 +282,16 @@ export const reviewBulk = (pid: string, ids: string[], action: ReviewAction): Pr
     body: JSON.stringify({ ids, action }),
   }).then(unwrap<{ count: number }>);
 
-export const addRequirement = (pid: string, statement: string, reason = ""): Promise<{ added: boolean; id: string }> =>
+export const addRequirement = (
+  pid: string,
+  statement: string,
+  reason = "",
+  opts: { rtype?: string; feature?: string; priority?: string; nfr_category?: string } = {},
+): Promise<{ added: boolean; id: string }> =>
   fetch(`/api/projects/${pid}/requirements`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ statement, reason }),
+    body: JSON.stringify({ statement, reason, ...opts }),
   }).then(unwrap<{ added: boolean; id: string }>);
 
 // --- decision resolution ----------------------------------------------------

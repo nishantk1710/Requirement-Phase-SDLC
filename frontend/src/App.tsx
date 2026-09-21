@@ -5,11 +5,15 @@ import {
   acceptAll,
   addRequirement,
   applyRecommendedDecisions,
+  attachCodebase,
+  attachCodebaseZip,
   autoAccept,
   deleteProject,
   downloadHandoffZip,
+  generateChangePack,
   getArtifact,
   getChanges,
+  getCodebase,
   getConfig,
   getCorpora,
   getFsList,
@@ -40,6 +44,7 @@ import {
 const triageLevel = (r: Requirement): string => r.triage?.level ?? "review";
 type Filter = "all" | "attention" | "review" | "routine";
 type Phase = "input" | "run" | "review" | "srs";
+type Mode = "fresh" | "existing";   // greenfield (full SRS) vs brownfield (change-only SRS for a repo)
 
 const DEFAULT_PROJECT = "P-ELAMS";
 
@@ -47,6 +52,14 @@ export function App() {
   const [entered, setEntered] = useState(false);
   const [phase, setPhase] = useState<Phase>("input");
   const [pid, setPid] = useState(DEFAULT_PROJECT);
+  // the project input is a DRAFT until blur/Enter — otherwise every keystroke changes `pid` (the
+  // query key) and fires a storm of API calls for each partial name, and trailing spaces leak in.
+  const [pidDraft, setPidDraft] = useState(pid);
+  useEffect(() => { setPidDraft(pid); }, [pid]);
+  const commitPid = () => {
+    const v = pidDraft.trim();
+    if (v && v !== pid) setPid(v); else setPidDraft(pid);
+  };
   const [corpus, setCorpus] = useState<string>("");
   const [running, setRunning] = useState(false);
   const [filter, setFilter] = useState<Filter>("attention");
@@ -125,12 +138,47 @@ export function App() {
       postReview(v.id, v.action, v.edits),
     onSuccess: invalidate,
   });
-  const generate = useMutation({ mutationFn: () => postGenerate(pid), onSuccess: () => { setGenerating(true); setPhase("srs"); } });
+  const generate = useMutation({
+    mutationFn: () => postGenerate(pid),
+    onSuccess: () => {
+      // clear any previous "done" status so re-generation doesn't look already-finished (which
+      // would freeze the badge on the OLD version while the doc shows the new one).
+      qc.setQueryData(["genstatus", pid], { state: "running", stage: "starting", message: "Starting generation…" });
+      setGenerating(true);
+      setPhase("srs");
+    },
+  });
+  // --- mode (fresh vs existing-codebase) --------------------------------------
+  const codebaseQ = useQuery({ queryKey: ["codebase", pid], queryFn: () => getCodebase(pid) });
+  const codebaseAttached = !!codebaseQ.data?.attached;
+  const [mode, setMode] = useState<Mode>("fresh");
+  useEffect(() => {
+    // an attached codebase means brownfield (server truth); otherwise restore the saved choice.
+    if (codebaseAttached) { setMode("existing"); return; }
+    try { const s = localStorage.getItem(`rga:mode:${pid}`); if (s === "existing" || s === "fresh") setMode(s as Mode); } catch { /* ignore */ }
+  }, [pid, codebaseAttached]);
+  const chooseMode = (m: Mode) => { setMode(m); try { localStorage.setItem(`rga:mode:${pid}`, m); } catch { /* ignore */ } };
+  const changeGen = useMutation({
+    mutationFn: () => generateChangePack(pid),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ["artifact", pid] }); setPhase("srs"); },
+  });
+  // in existing mode the run corpus IS the synthetic requirements doc — restore it on reload
+  useEffect(() => {
+    if (mode === "existing" && codebaseQ.data?.corpus) setCorpus(codebaseQ.data.corpus);
+  }, [mode, codebaseQ.data?.corpus]);
   const genStatus = useQuery({
     queryKey: ["genstatus", pid],
     queryFn: () => getGenerateStatus(pid),
-    enabled: generating,
-    refetchInterval: generating ? 1200 : false,
+    // Poll off the ACTUAL backend state, not just the local `generating` flag, and keep polling in a
+    // backgrounded tab — otherwise a slow generation that finishes while the tab is unfocused leaves
+    // the page stuck on a stale "assembling" message (it never sees "done").
+    refetchInterval: (q) => {
+      const st = q.state.data?.state;
+      // poll while a generation is actually in flight — but a stale "done"/"error" must NOT stop a
+      // freshly-kicked-off one (`generating`), or the badge freezes on the previous version.
+      return (st === "running" || (generating && st !== "done" && st !== "error")) ? 1200 : false;
+    },
+    refetchIntervalInBackground: true,
   });
   // agile: has an SRS baseline been generated yet? drives the post-generation "revise" affordances
   // (shares the ["changes", pid] cache with ChangesPanel; false until the first SRS exists).
@@ -139,6 +187,7 @@ export function App() {
   // the "revise requirements" section auto-opens ONCE when a baseline first appears, then respects
   // the user's own collapse/expand (so it never fights a re-render that refetches the delta).
   const [reqOpen, setReqOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);   // "+ Add requirement" inline form
   useEffect(() => { if (hasBaseline) setReqOpen(true); }, [hasBaseline]);
   const reqSectionRef = useRef<HTMLDetailsElement>(null);
   // "Revise" jumps to Review with the editable requirements list OPEN, UNFILTERED, and in view.
@@ -172,6 +221,7 @@ export function App() {
 
   // review triage: filter tabs + selection
   const allReqs = list.data?.requirements ?? [];
+  const featureList = [...new Set(allReqs.map((r) => r.feature).filter(Boolean) as string[])].sort();
   const isPending = (r: Requirement) => r.status === "candidate" || r.status === "needs_review";
   const pending = allReqs.filter(isPending);
   const lvlCount = (lvl: string) => pending.filter((r) => triageLevel(r) === lvl).length;
@@ -207,10 +257,12 @@ export function App() {
         <label className="proj">
           Project&nbsp;
           <input
-            value={pid}
+            value={pidDraft}
             disabled={running || generating}
-            title={running || generating ? "finish or leave the current run before switching project" : "project id"}
-            onChange={(e) => setPid(e.target.value)}
+            title={running || generating ? "finish or leave the current run before switching project" : "project id (press Enter to switch)"}
+            onChange={(e) => setPidDraft(e.target.value)}
+            onBlur={commitPid}
+            onKeyDown={(e) => { if (e.key === "Enter") { commitPid(); (e.target as HTMLInputElement).blur(); } }}
           />
         </label>
         <div className="dangerzone">
@@ -257,38 +309,87 @@ export function App() {
         <li className={phase === "input" ? "on" : ""}><button className="stepbtn" onClick={() => setPhase("input")}>1 · Input</button></li>
         <li className={phase === "run" ? "on" : ""}><button className="stepbtn" disabled={!running && !status.data} onClick={() => (running || status.data) && setPhase("run")}>2 · Run agents</button></li>
         <li className={phase === "review" ? "on" : ""}><button className="stepbtn" disabled={allReqs.length === 0} onClick={() => allReqs.length && setPhase("review")}>3 · Review</button></li>
-        <li className={phase === "srs" ? "on" : ""}><button className="stepbtn" disabled={!(gate.data?.ready || genStatus.data?.state === "done")} onClick={() => (gate.data?.ready || genStatus.data?.state === "done") && setPhase("srs")}>4 · SRS</button></li>
+        <li className={phase === "srs" ? "on" : ""}><button className="stepbtn" disabled={!(gate.data?.ready || genStatus.data?.state === "done" || changeGen.isSuccess)} onClick={() => (gate.data?.ready || genStatus.data?.state === "done" || changeGen.isSuccess) && setPhase("srs")}>4 · {mode === "existing" ? "Change docs" : "SRS"}</button></li>
       </ol>
 
       <div className="phaseview" key={phase}>
       {/* ---- PHASE 1 · INPUT ---- */}
       {phase === "input" && (
       <section className="panel">
-        <h2>1 · Input your documents</h2>
-        <p className="muted">Pick a prepared document set or upload your own (.docx / .pdf / .txt / .csv), then run the agent pipeline.</p>
-        <div className="piperow">
-          <label>
-            Document set&nbsp;
-            <select value={corpus} onChange={(e) => setCorpus(e.target.value)}>
-              {(corpora.data?.corpora ?? []).map((c) => (
-                <option key={c.path} value={c.path}>
-                  {c.id} ({c.kind}, {c.docs.length} docs)
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <span className="or">or</span>
-
-          <input
-            ref={fileRef}
-            type="file"
-            multiple
-            onChange={(e) => e.target.files && e.target.files.length && upload.mutate(e.target.files)}
-          />
-          {upload.isPending && <span className="muted">uploading…</span>}
-          {upload.isSuccess && <span className="ok">uploaded {upload.data.docs.length} doc(s)</span>}
+        <h2>1 · Choose how you're building</h2>
+        <div className="modepick">
+          <button className={`modecard ${mode === "fresh" ? "on" : ""}`} onClick={() => chooseMode("fresh")}>
+            <b>Net-new system</b>
+            <span>Build from scratch — a full IEEE-830 <b>SRS &amp; RTM</b> elicited from your business &amp; requirement documents.</span>
+          </button>
+          <button className={`modecard ${mode === "existing" ? "on" : ""}`} onClick={() => chooseMode("existing")}>
+            <b>Existing codebase</b>
+            <span>Evolve a live repository — RGA analyzes the source, reconstructs its requirements, and produces a <b>scoped SRS &amp; RTM</b> mapped to the real code.</span>
+          </button>
         </div>
+
+        {mode === "existing" && (
+          <div className="cb-step">
+            <h3>Step A · Analyze the existing codebase</h3>
+            <p className="muted small">Upload the existing repository as a <b>.zip</b> (or point to its folder). RGA scans it
+              and synthesizes an <b>enhancement-requirements PDF</b> — proposing <b>new</b> requirements that are distinct
+              from what the code already implements. That PDF (shown in Step B) is the input the pipeline extracts from,
+              so the SRS/RTM specify the changes for the existing system.</p>
+            <CodebaseAttach pid={pid} onAttached={(c) => setCorpus(c)} />
+          </div>
+        )}
+
+        {mode === "existing" ? (
+          <>
+            <h3 className="cb-step-h">Step B · Requirements input document</h3>
+            <p className="muted">RGA synthesized a PDF of proposed <b>enhancement requirements</b> (new, distinct from the
+              existing code). Choose it below — or pick another document set — then run the pipeline to fetch the
+              requirements, review, and generate the SRS &amp; RTM.</p>
+            <div className="piperow">
+              <label>
+                Input document&nbsp;
+                <select value={corpus} onChange={(e) => setCorpus(e.target.value)}>
+                  {(corpora.data?.corpora ?? []).map((c) => (
+                    <option key={c.path} value={c.path}>
+                      {c.id} ({c.kind}, {c.docs.length} docs)
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="muted">Pick a prepared document set or upload your own (.docx / .pdf / .txt / .csv), then run the agent pipeline.</p>
+            <div className="piperow">
+              <label>
+                Document set&nbsp;
+                <select value={corpus} onChange={(e) => setCorpus(e.target.value)}>
+                  {(corpora.data?.corpora ?? []).map((c) => (
+                    <option key={c.path} value={c.path}>
+                      {c.id} ({c.kind}, {c.docs.length} docs)
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <span className="or">or</span>
+
+              <input
+                ref={fileRef}
+                type="file"
+                multiple
+                onChange={(e) => e.target.files && e.target.files.length && upload.mutate(e.target.files)}
+              />
+              {upload.isPending && <span className="muted">uploading…</span>}
+              {upload.isSuccess && <span className="ok">uploaded {upload.data.docs.length} doc(s)</span>}
+            </div>
+          </>
+        )}
+
+        {mode === "existing" && !selectedCorpus && codebaseAttached && (
+          <p className="muted small">Preparing the synthetic requirements document…</p>
+        )}
 
         {/* what's actually being ingested — the metadata of every file in the selected set */}
         {selectedCorpus && (selectedCorpus.files?.length ?? 0) > 0 && (
@@ -320,12 +421,15 @@ export function App() {
         <div className="phase-cta">
           <button
             className="btn-primary lg"
-            disabled={!corpus || running || mockProvider}
+            disabled={!corpus || running || mockProvider || (mode === "existing" && !codebaseAttached)}
             title={mockProvider ? "start the server with --provider foundry to run extraction" : corpus}
             onClick={() => run.mutate()}
           >
             {running ? "Starting…" : "Run the agent pipeline →"}
           </button>
+          {mode === "existing" && !codebaseAttached && (
+            <p className="muted small">Attach the existing codebase (Step A) before running.</p>
+          )}
         </div>
         {run.isError && <p className="gate-blocked">Could not start the run: {(run.error as Error).message}</p>}
         {mockProvider && (
@@ -374,8 +478,9 @@ export function App() {
         {/* PRIMARY surface: review by DECISION (clustered, owner-routed, propose-don't-ask) */}
         {list.data && allReqs.length > 0 && <Decisions pid={pid} reqs={allReqs} onResolved={invalidate} />}
 
-        {/* Technology Stack (SRS §7): pick one candidate per aspect (recommended = default) */}
-        {list.data && allReqs.length > 0 && <TechStack pid={pid} />}
+        {/* Technology Stack (SRS §7): pick one candidate per aspect (recommended = default).
+            Hidden for brownfield — the existing codebase already defines the stack. */}
+        {mode !== "existing" && list.data && allReqs.length > 0 && <TechStack pid={pid} />}
 
         {list.data && allReqs.length > 0 && (
           <>
@@ -435,8 +540,21 @@ export function App() {
                 <input type="checkbox" checked={allSelected} disabled={visible.length === 0} onChange={toggleAll} />
                 Select all shown
               </label>
-              <span className="muted small">Showing {visible.length} of {allReqs.length}</span>
+              <span className="reqlist-bar-right">
+                <span className="muted small">Showing {visible.length} of {allReqs.length}</span>
+                <button className="btn-ghost sm addreq-btn" onClick={() => setAddOpen((v) => !v)}>
+                  {addOpen ? "Close" : "+ Add requirement"}
+                </button>
+              </span>
             </div>
+            {addOpen && (
+              <AddRequirementForm
+                pid={pid}
+                features={featureList}
+                onClose={() => setAddOpen(false)}
+                onAdded={() => { setFilter("all"); invalidate(); }}
+              />
+            )}
             <div className="reqlist">
               {visible.map((r) => (
                 <Row
@@ -493,15 +611,27 @@ export function App() {
                     {acceptAllM.isPending ? "Approving…" : `Approve all remaining (${pending.length})`}
                   </button>
                 </div>
-                <button
-                  className="btn-primary lg"
-                  disabled={!gate.data?.ready || generating}
-                  title={gate.data?.reason}
-                  onClick={() => generate.mutate()}
-                >
-                  {generating ? "Generating…" : "Generate SRS / RTM →"}
-                </button>
+                {mode === "existing" ? (
+                  <button
+                    className="btn-primary lg"
+                    disabled={!gate.data?.ready || changeGen.isPending}
+                    title={gate.data?.reason}
+                    onClick={() => changeGen.mutate()}
+                  >
+                    {changeGen.isPending ? "Generating…" : "Generate Change SRS + RTM →"}
+                  </button>
+                ) : (
+                  <button
+                    className="btn-primary lg"
+                    disabled={!gate.data?.ready || generating}
+                    title={gate.data?.reason}
+                    onClick={() => generate.mutate()}
+                  >
+                    {generating ? "Generating…" : "Generate SRS / RTM →"}
+                  </button>
+                )}
               </div>
+              {changeGen.isError && <p className="gate-blocked">{(changeGen.error as Error).message}</p>}
             </div>
           </>
         )}
@@ -511,6 +641,19 @@ export function App() {
       {/* ---- PHASE 4 · SRS ---- */}
       {phase === "srs" && (
       <section className="panel">
+        {mode === "existing" ? (
+          <>
+            <div className="reviewhead">
+              <h2>4 · Change documents</h2>
+              {changeGen.isSuccess && <span className="ok">Change SRS + RTM generated</span>}
+            </div>
+            {changeGen.isError && <p className="gate-blocked">{(changeGen.error as Error).message}</p>}
+            {changeGen.isSuccess
+              ? <CodebaseResults pid={pid} />
+              : <p className="muted">No change documents yet — go to <b>Review</b> and click <b>Generate Change SRS + RTM</b>.</p>}
+          </>
+        ) : (
+        <>
         <div className="reviewhead">
           <h2>4 · Generated documents</h2>
           {genStatus.data?.state === "done" && (() => {
@@ -548,7 +691,7 @@ export function App() {
           <div className={`runstatus ${genStatus.data.state}`}>
             <span className="spinner" data-on={generating} /><b>Generation</b>
             <span className="muted">{genStatus.data.message}</span>
-            <p className="muted small genhint">Drafting the SRS prose with the LLM can take up to a minute. If the model is slow or unavailable it falls back automatically — this page updates on its own when it finishes.</p>
+            <p className="muted small genhint">Drafting the full SRS prose with the LLM is the longest step — it can take a minute or two. If the model is slow or unavailable it falls back automatically — this page updates on its own when it finishes (even in a background tab).</p>
           </div>
         )}
         {genStatus.data?.state === "error" && (
@@ -557,6 +700,8 @@ export function App() {
         {genStatus.data?.state === "done"
           ? <><Results pid={pid} /><AssetPicker pid={pid} /></>
           : !generating && <p className="muted">No documents yet — go to Review and click <b>Generate SRS / RTM</b>.</p>}
+        </>
+        )}
       </section>
       )}
       </div>
@@ -893,6 +1038,78 @@ function AssetPicker({ pid }: { pid: string }) {
   );
 }
 
+// Manually author a new requirement (created APPROVED, human-sourced) — the "added" case of the
+// agile loop. Reuses POST /projects/{pid}/requirements; the new requirement shows as NEW in the
+// Changes panel and flows into the next SRS version.
+function AddRequirementForm({ pid, features, onClose, onAdded }: {
+  pid: string; features: string[]; onClose: () => void; onAdded: () => void;
+}) {
+  const [stmt, setStmt] = useState("");
+  const [rtype, setRtype] = useState("functional");
+  const [feature, setFeature] = useState("");
+  const [priority, setPriority] = useState("");
+  const [nfrCat, setNfrCat] = useState("");
+  const m = useMutation({
+    mutationFn: () => addRequirement(pid, stmt.trim(), "Added manually", {
+      rtype,
+      feature: rtype === "functional" && feature.trim() ? feature.trim() : undefined,
+      priority: priority || undefined,
+      nfr_category: rtype === "non_functional" && nfrCat ? nfrCat : undefined,
+    }),
+    onSuccess: () => { onAdded(); onClose(); },
+  });
+  return (
+    <div className="addreq-card">
+      <textarea className="reqedit" rows={2} autoFocus placeholder="The system shall…"
+                value={stmt} onChange={(e) => setStmt(e.target.value)} />
+      <div className="addreq-fields">
+        <label>Type
+          <select value={rtype} onChange={(e) => setRtype(e.target.value)}>
+            <option value="functional">functional</option>
+            <option value="non_functional">non-functional</option>
+            <option value="business">business</option>
+            <option value="constraint">constraint</option>
+            <option value="assumption">assumption</option>
+          </select>
+        </label>
+        {rtype === "functional" && (
+          <label>Feature
+            <input list="addreq-features" placeholder="(optional)" value={feature}
+                   onChange={(e) => setFeature(e.target.value)} />
+            <datalist id="addreq-features">{features.map((f) => <option key={f} value={f} />)}</datalist>
+          </label>
+        )}
+        {rtype === "non_functional" && (
+          <label>Category
+            <select value={nfrCat} onChange={(e) => setNfrCat(e.target.value)}>
+              <option value="">quality (§5.4)</option>
+              <option value="performance">performance (§5.1)</option>
+              <option value="safety">safety (§5.2)</option>
+              <option value="security">security (§5.3)</option>
+            </select>
+          </label>
+        )}
+        <label>Priority
+          <select value={priority} onChange={(e) => setPriority(e.target.value)}>
+            <option value="">auto</option>
+            <option value="must">must</option>
+            <option value="should">should</option>
+            <option value="could">could</option>
+            <option value="wont">won&apos;t</option>
+          </select>
+        </label>
+      </div>
+      <div className="addreq-actions">
+        <button className="btn-primary sm" disabled={!stmt.trim() || m.isPending} onClick={() => m.mutate()}>
+          {m.isPending ? "Adding…" : "Add requirement"}
+        </button>
+        <button className="ghost sm" disabled={m.isPending} onClick={onClose}>Cancel</button>
+        {m.isError && <span className="gate-blocked small">{(m.error as Error).message}</span>}
+      </div>
+    </div>
+  );
+}
+
 function Row({
   r, busy, selected, selectable, hasBaseline, onToggle, onReview,
 }: {
@@ -994,6 +1211,95 @@ const KIND_LABEL: Record<string, string> = {
 const recommendsExclude = (d: Decision) => /exclude|defer|out of scope|drop/i.test(d.recommended);
 // the suggested requirement text for gap/possible-miss decisions (strip the "…: " prefix)
 const suggestionText = (d: Decision) => (d.evidence[0] ?? d.question).replace(/^[^:]{3,40}:\s*/, "").trim();
+
+// Brownfield: attach an EXISTING codebase, then generate a change-only SRS + RTM scoped to it.
+// Collapsed by default (greenfield projects ignore it); opens once a codebase is attached.
+// Attach + understand an existing codebase (path or .zip). Used in the Input phase's "Existing
+// codebase" mode — Step A. Generation of the change pack happens later in the Review→SRS flow.
+function CodebaseAttach({ pid, onAttached }: { pid: string; onAttached: (corpus: string) => void }) {
+  const qc = useQueryClient();
+  const cb = useQuery({ queryKey: ["codebase", pid], queryFn: () => getCodebase(pid) });
+  const [path, setPath] = useState("");
+  const done = (r: { corpus?: string }) => {
+    void qc.invalidateQueries({ queryKey: ["codebase", pid] });
+    void qc.invalidateQueries({ queryKey: ["corpora"] });
+    if (r.corpus) onAttached(r.corpus);   // the synthetic requirements doc becomes the run corpus
+  };
+  const attach = useMutation({
+    mutationFn: () => attachCodebase(pid, path.trim() || (cb.data?.root ?? "")),
+    onSuccess: done,
+  });
+  const zip = useMutation({
+    mutationFn: (f: File) => attachCodebaseZip(pid, f),
+    onSuccess: done,
+  });
+  const info = cb.data;
+  const attached = !!info?.attached;
+  const busy = attach.isPending || zip.isPending;
+  return (
+    <div className="cb-attach-card">
+      <div className="cb-attach-row">
+        <label className="btn-primary cb-zip-btn">
+          {zip.isPending ? "Uploading…" : attached ? "Replace .zip" : "Upload .zip"}
+          <input type="file" accept=".zip,application/zip" hidden disabled={busy}
+                 onChange={(e) => { const f = e.target.files?.[0]; if (f) zip.mutate(f); e.target.value = ""; }} />
+        </label>
+        <span className="muted small">or a local folder path:</span>
+        <input type="text" placeholder={info?.root || "C:\\path\\to\\existing\\codebase"} value={path}
+               onChange={(e) => setPath(e.target.value)} />
+        <button className="btn-ghost sm" disabled={busy || (!path.trim() && !attached)} onClick={() => attach.mutate()}>
+          {attach.isPending ? "Scanning…" : attached ? "Re-scan" : "Scan folder"}
+        </button>
+      </div>
+      {(attach.isError || zip.isError) && (
+        <p className="gate-blocked small">{((attach.error || zip.error) as Error).message}</p>
+      )}
+      {attached && info && (
+        <div className="cb-attached">
+          <p className="small"><span className="ok">✓ analyzed</span> · <b>{info.n_files}</b> source file(s) · <code>{info.root}</code>{info.truncated ? " (truncated)" : ""}</p>
+          {info.doc && <p className="muted small">Synthesized an enhancement-requirements PDF (<code>{info.doc}</code>) — new requirements, distinct from the code → the input in Step B.</p>}
+          {info.summary && <p className="muted">{info.summary}</p>}
+          {(info.capabilities?.length ?? 0) > 0 && (
+            <div className="tablewrap">
+              <table className="cb-caps">
+                <thead><tr><th>Module</th><th>Files</th><th>Language</th><th>Key components</th></tr></thead>
+                <tbody>
+                  {info.capabilities!.slice(0, 12).map((c) => (
+                    <tr key={c.module}>
+                      <td><code>{c.module}</code></td><td>{c.files}</td><td>{c.language}</td>
+                      <td className="muted small">{c.key_symbols.slice(0, 6).join(", ") || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CodebaseResults({ pid }: { pid: string }) {
+  const [tab, setTab] = useState<"CHANGE_SRS.md" | "CHANGE_RTM.csv">("CHANGE_SRS.md");
+  const doc = useQuery({ queryKey: ["artifact", pid, tab], queryFn: () => getArtifact(pid, tab) });
+  const isRtm = tab === "CHANGE_RTM.csv";
+  return (
+    <div className="cb-results">
+      <div className="tabs doctabs">
+        <button className={!isRtm ? "on" : ""} onClick={() => setTab("CHANGE_SRS.md")}>Change SRS</button>
+        <button className={isRtm ? "on" : ""} onClick={() => setTab("CHANGE_RTM.csv")}>Change RTM</button>
+        <span className="muted small dl-note">saved to handoff/{pid}/</span>
+        <a className="dl-docx dl-right" href={`/api/projects/${pid}/artifacts/${isRtm ? "CHANGE_RTM.csv" : "CHANGE_SRS.docx"}`} download>
+          {isRtm ? "Download (.csv)" : "Download (.docx)"}
+        </a>
+      </div>
+      {doc.isLoading ? <div className="doc">Loading…</div>
+        : doc.isError ? <div className="doc gate-blocked">Could not load: {(doc.error as Error).message}</div>
+        : isRtm ? <CsvTable text={doc.data ?? ""} /> : <Markdown text={doc.data ?? ""} />}
+    </div>
+  );
+}
 
 // Agile: the delta of the current approved set vs the last generated baseline (added / modified /
 // removed). Only appears once a baseline exists — i.e. after the first SRS has been generated.

@@ -29,6 +29,7 @@ from .orm import (
     AgentRunRow,
     BaselineRow,
     ChunkRow,
+    CodebaseRow,
     DecisionResolutionRow,
     ProjectRow,
     RequirementRow,
@@ -262,6 +263,34 @@ class Repository:
         async with self.db.session() as s:
             async with s.begin():
                 await s.execute(delete(BaselineRow).where(BaselineRow.project_id == project_id))
+
+    # --- codebase (brownfield: an attached existing source tree) --------------
+    async def save_codebase(self, project_id: str, root: str, index: dict, understanding: dict) -> None:
+        """Upsert the scanned + understood codebase for a project (one row per project)."""
+        async with self.db.session() as s:
+            async with s.begin():
+                row = await s.get(CodebaseRow, project_id)
+                if row is None:
+                    s.add(CodebaseRow(project_id=project_id, root=root, index=index,
+                                      understanding=understanding, created_at=datetime.now()))
+                else:
+                    row.root, row.index, row.understanding = root, index, understanding
+                    row.created_at = datetime.now()
+
+    async def get_codebase(self, project_id: str) -> dict | None:
+        """The attached codebase (index + understanding) for a project, or None if greenfield."""
+        async with self.db.session() as s:
+            row = await s.get(CodebaseRow, project_id)
+            if row is None:
+                return None
+            return {"root": row.root, "index": row.index or {}, "understanding": row.understanding or {},
+                    "created_at": row.created_at.isoformat()}
+
+    async def delete_codebase(self, project_id: str) -> None:
+        """Drop a project's attached codebase (used when the project itself is deleted)."""
+        async with self.db.session() as s:
+            async with s.begin():
+                await s.execute(delete(CodebaseRow).where(CodebaseRow.project_id == project_id))
 
     async def list_decision_resolutions(self, project_id: str) -> list[dict]:
         """The full resolution log for a project (audit)."""
